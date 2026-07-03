@@ -1,0 +1,4 @@
+mi-data.json
+*.log
+__pycache__/
+*.pyc

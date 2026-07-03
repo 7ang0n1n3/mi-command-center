@@ -1,0 +1,16 @@
+[MAJOR INCIDENT] {{title}}
+
+Status: {{status}}
+Priority: {{priorityLabel}}
+Severity: {{severityLabel}}
+Impact: {{impact}}
+Affected Services: {{services}}
+
+We are aware of an issue affecting the services listed above. Our incident response team is actively investigating.
+
+Major Incident Manager: {{mim}}
+Time: {{time}}
+
+Next update in 45 minutes.
+
+— {{org}} Service Desk

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Offline Major Incident management for Service Desk">
+  <title>MI Command — Major Incident Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+        </div>
+        <div>
+          <h1>MI Command</h1>
+          <p>Major Incident Desk</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="nav-item" data-view="incidents">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          All Incidents
+        </button>
+        <button class="nav-item" data-view="templates">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+          Playbooks
+        </button>
+        <button class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          Data &amp; Settings
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-primary btn-block" id="btn-declare-mi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Declare Major Incident
+        </button>
+        <p class="offline-badge" id="storage-status">
+          <span class="pulse"></span>
+          Loading…
+        </p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h2 id="page-title">Dashboard</h2>
+          <p id="page-subtitle" class="text-muted">Service Desk command centre</p>
+        </div>
+        <div class="topbar-right">
+          <div class="sync-status hidden" id="sync-status" title="Team sync status">
+            <span class="sync-dot"></span>
+            <span id="sync-label">Syncing…</span>
+          </div>
+          <div class="clock" id="live-clock"></div>
+        </div>
+      </header>
+
+      <div id="view-dashboard" class="view active">
+        <div class="stats-grid">
+          <div class="stat-card stat-critical">
+            <span class="stat-label">Active MIs</span>
+            <span class="stat-value" id="stat-active">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Investigating</span>
+            <span class="stat-value" id="stat-investigating">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Resolved Today</span>
+            <span class="stat-value" id="stat-resolved-today">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Open Actions</span>
+            <span class="stat-value" id="stat-open-actions">0</span>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h3>Active Major Incidents</h3>
+            <button class="btn btn-ghost btn-sm" id="btn-view-all">View all</button>
+          </div>
+          <div id="active-incidents-list" class="incident-cards"></div>
+          <div id="no-active-msg" class="empty-state hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p>No active major incidents</p>
+            <span class="text-muted">All systems nominal</span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h3>Recent Activity</h3>
+          </div>
+          <div id="recent-activity" class="activity-feed"></div>
+        </section>
+      </div>
+
+      <div id="view-incidents" class="view">
+        <div class="toolbar">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="search" id="incident-search" placeholder="Search incidents…">
+          </div>
+          <select id="filter-status" class="select">
+            <option value="all">All statuses</option>
+            <option value="active">Active only</option>
+            <option value="declared">Declared</option>
+            <option value="investigating">Investigating</option>
+            <option value="mitigating">Mitigating</option>
+            <option value="monitoring">Monitoring</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+        <div id="all-incidents-list" class="incident-table-wrap"></div>
+      </div>
+
+      <div id="view-detail" class="view">
+        <div class="detail-header" id="detail-header"></div>
+        <div class="detail-tabs">
+          <button class="tab active" data-tab="overview">Overview</button>
+          <button class="tab" data-tab="timeline">Timeline</button>
+          <button class="tab" data-tab="actions">Actions</button>
+          <button class="tab" data-tab="team">War Room</button>
+          <button class="tab" data-tab="comms">Communications</button>
+        </div>
+        <div id="tab-overview" class="tab-panel active"></div>
+        <div id="tab-timeline" class="tab-panel"></div>
+        <div id="tab-actions" class="tab-panel"></div>
+        <div id="tab-team" class="tab-panel"></div>
+        <div id="tab-comms" class="tab-panel"></div>
+      </div>
+
+      <div id="view-templates" class="view">
+        <div class="playbook-grid" id="playbook-grid"></div>
+      </div>
+
+      <div id="view-settings" class="view">
+        <section class="panel">
+          <div class="panel-header"><h3>Data File</h3></div>
+          <div class="data-file-panel">
+            <div class="data-file-status" id="data-file-status">
+              <span class="data-file-icon" aria-hidden="true">📄</span>
+              <div>
+                <p class="data-file-label" id="data-file-label">Checking storage…</p>
+                <p class="text-muted" id="data-file-hint"></p>
+              </div>
+            </div>
+            <div class="data-file-actions" id="data-file-actions">
+              <button class="btn btn-secondary" id="btn-link-file">Open Data File</button>
+              <button class="btn btn-secondary" id="btn-create-file">Create Data File</button>
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-header"><h3>Data Management</h3></div>
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h4>Export Data</h4>
+              <p class="text-muted">Download all incidents as JSON for backup or transfer to another machine.</p>
+              <button class="btn btn-secondary" id="btn-export">Export JSON</button>
+            </div>
+            <div class="settings-card">
+              <h4>Import Data</h4>
+              <p class="text-muted">Restore from a previous export. Merges with existing data by incident ID.</p>
+              <input type="file" id="import-file" accept=".json" hidden>
+              <button class="btn btn-secondary" id="btn-import">Import JSON</button>
+            </div>
+            <div class="settings-card">
+              <h4>Incident Report</h4>
+              <p class="text-muted">Export overview and timeline for the open incident as HTML or plain text.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-secondary" id="btn-export-report" disabled>Export HTML</button>
+                <button class="btn btn-secondary" id="btn-export-report-txt" disabled>Export Text</button>
+                <button class="btn btn-ghost btn-sm" id="btn-print" disabled>Print</button>
+              </div>
+            </div>
+            <div class="settings-card danger-zone">
+              <h4>Clear All Data</h4>
+              <p class="text-muted">Permanently delete all incidents. The data file is also cleared.</p>
+              <button class="btn btn-danger" id="btn-clear">Clear All Data</button>
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-header"><h3>Organisation</h3></div>
+          <div class="form-group">
+            <label for="org-name">Organisation Name</label>
+            <input type="text" id="org-name" class="input" placeholder="Your organisation">
+          </div>
+          <div class="form-group">
+            <label for="bridge-number">Bridge / Conference Number</label>
+            <input type="text" id="bridge-number" class="input" placeholder="e.g. +1 800 555 0100">
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Declare MI Modal -->
+  <dialog id="modal-declare" class="modal">
+    <form id="form-declare" method="dialog">
+      <div class="modal-header">
+        <h3>Declare Major Incident</h3>
+        <button type="button" class="btn-icon modal-close" data-close>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="mi-title">Incident Title <span class="required">*</span></label>
+          <input type="text" id="mi-title" class="input" required placeholder="Brief description of the incident">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mi-priority">Priority</label>
+            <select id="mi-priority" class="select">
+              <option value="p1" selected>P1 — Highest</option>
+              <option value="p2">P2 — High</option>
+              <option value="p3">P3 — Medium</option>
+              <option value="p4">P4 — Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="mi-severity">Severity</label>
+            <select id="mi-severity" class="select">
+              <option value="s1" selected>S1 — Critical</option>
+              <option value="s2">S2 — Major</option>
+              <option value="s3">S3 — Moderate</option>
+              <option value="s4">S4 — Minor</option>
+              <option value="s5">S5 — Minimal</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mi-impact">Business Impact</label>
+            <select id="mi-impact" class="select">
+              <option value="enterprise">Enterprise-wide</option>
+              <option value="department">Department / Region</option>
+              <option value="service">Single Service</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="mi-services">Affected Services</label>
+          <input type="text" id="mi-services" class="input" placeholder="Comma-separated service names">
+        </div>
+        <div class="form-group">
+          <label for="mi-description">Initial Assessment</label>
+          <textarea id="mi-description" class="textarea" rows="3" placeholder="What is known so far?"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="mi-commander">Major Incident Manager</label>
+          <input type="text" id="mi-commander" class="input" placeholder="Name of MIM">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Declare &amp; Open War Room</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Generic Modal -->
+  <dialog id="modal-generic" class="modal">
+    <div class="modal-header">
+      <h3 id="generic-modal-title"></h3>
+      <button type="button" class="btn-icon modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body" id="generic-modal-body"></div>
+    <div class="modal-footer" id="generic-modal-footer"></div>
+  </dialog>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/labels.js"></script>
+  <script src="js/comms.js"></script>
+  <script src="js/report.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+[MI UPDATE] {{title}}
+
+Status: {{status}}
+Duration: {{duration}}
+
+Current situation:
+{{description}}
+
+Actions in progress:
+{{openActions}}
+
+ETA: TBC
+
+— {{org}} Service Desk

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "initial",
+    "title": "Initial Notification",
+    "file": "initial-notification.txt"
+  },
+  {
+    "id": "update",
+    "title": "Progress Update",
+    "file": "progress-update.txt"
+  },
+  {
+    "id": "resolved",
+    "title": "Resolution Notice",
+    "file": "resolution-notice.txt"
+  }
+]

@@ -1,0 +1,10 @@
+[MI RESOLVED] {{title}}
+
+The major incident has been resolved.
+
+Duration: {{duration}}
+Resolution: {{resolution}}
+{{rootCauseLine}}
+A post-incident review will be scheduled.
+
+— {{org}} Service Desk
