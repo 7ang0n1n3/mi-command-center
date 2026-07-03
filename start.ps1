@@ -1,4 +1,4 @@
-# MI Command — local PowerShell server with mi-data.json persistence
+# MI Command - local PowerShell server with mi-data.json persistence
 param([int]$Port = 8080)
 
 $Root = [IO.Path]::GetFullPath($PSScriptRoot)
@@ -211,7 +211,7 @@ try {
 }
 
 Write-Host ""
-Write-Host "MI Command — open in browser (share with your team):"
+Write-Host "MI Command - open in browser (share with your team):"
 foreach ($url in $urls) {
     Write-Host "  $($url.TrimEnd('/'))"
 }
@@ -282,7 +282,8 @@ try {
             }
         }
         catch {
-            Send-Response $response 500 "text/plain" $_.Exception.Message
+            $errorMessage = $_.Exception.Message
+            Send-Response -Response $response -StatusCode 500 -ContentType "text/plain" -Body $errorMessage
         }
     }
 }
