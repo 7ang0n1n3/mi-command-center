@@ -4,6 +4,25 @@ All notable changes to MI Command are documented here.
 
 This project follows a simple date-based changelog because it is distributed as a portable internal tool rather than a packaged release.
 
+## 2026-07-08
+
+### Changed
+
+- Moved the primary navigation from a left sidebar to a horizontal top navigation bar.
+- Reworked the incident detail screen into a fuller command workspace with a large incident header, status progression, summary cards, and expanded incident details.
+- Added incident detail fields for Incident No, priority/severity, JST event times, priority justification, reported/detected fields, impacted services/company/users, CI, problem ticket, and change ticket.
+- Reworked Actions into a table with start, end, action, owner, status, and update columns.
+- New action items are inserted at the top of the action list.
+- Reworked War Room into grouped people tables for MIM, Technical Team, Vendor, SME, and Decision Maker/PSM/Leadership.
+- Added a War Room Bridge URL field with a Join button.
+- Expanded timeline audit entries to include committed overview changes, incident detail updates, action edits, and War Room updates.
+- Expanded HTML and text incident reports to include overview, incident details, actions, War Room information, and timeline.
+- Updated report overview and footer identifiers to use the user-entered Incident No when present.
+
+### Added
+
+- Persistent storage for expanded incident details, richer action metadata, War Room bridge URL, and grouped War Room participants.
+
 ## 2026-07-04
 
 ### Changed

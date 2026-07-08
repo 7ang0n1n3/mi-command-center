@@ -7,14 +7,18 @@ MI Command is a portable, PowerShell-driven local web app for declaring and mana
 ## Features
 
 - Declare Major Incidents with title, priority, severity, impact, affected services, initial assessment, and Major Incident Manager.
+- Use a top navigation layout with Dashboard, All Incidents, Playbooks, Data & Settings, and Declare Major Incident controls available across the app.
 - Track status from Declared through Investigating, Mitigating, Monitoring, and Resolved.
 - Enforce one-step status transitions and record explicit reopen events from Resolved back to Monitoring.
-- Maintain a live timeline, action checklist, and war-room role assignments.
-- Add timeline audit entries when actions are added, closed, reopened, or deleted.
+- Manage each incident from a detailed Overview workspace with incident summary fields, full incident details, priority/severity, impacted company, JST date/time fields, tickets, CI, and impact information.
+- Maintain a live timeline, editable action table, and War Room participant roster.
+- Add timeline audit entries when overview, incident detail, action, and War Room information changes.
+- Track action items with start, end, action, owner, status, and update fields. New action items appear at the top of the list.
+- Capture War Room bridge URL and grouped participants for MIM, Technical Team, Vendor, SME, and Decision Maker/PSM/Leadership.
 - Generate stakeholder communications from editable templates in `comms/`.
 - Keep valid communication templates available even when one template file is missing.
 - Export and import incident data as JSON.
-- Export per-incident reports as HTML or plain text.
+- Export per-incident reports as HTML or plain text, including overview, incident details, actions, War Room information, and timeline.
 - Run in team mode with automatic refresh and field-aware merge behavior through the PowerShell local server.
 
 ## Requirements
@@ -50,7 +54,7 @@ Incident data is saved to `mi-data.json` in the same folder.
 
 When connected through the PowerShell server, the dashboard polls every 3 seconds and shows `Live · team sync` in the top bar.
 
-Team sync reconciles remote content changes by merging timeline entries, action records, and overview fields. Action deletions are preserved with tombstones so older clients do not restore deleted work items.
+Team sync reconciles remote content changes by merging timeline entries, action records, overview fields, incident details, and War Room data. Action deletions are preserved with tombstones so older clients do not restore deleted work items.
 
 ## Custom Port
 
@@ -83,6 +87,20 @@ Template files can use placeholders such as `{{title}}`, `{{status}}`, `{{priori
 Add, remove, or reorder templates in `comms/manifest.json`. Refresh the browser tab after template changes.
 
 If one template file is missing or invalid, the Communications tab still shows the templates that loaded successfully and displays a warning for the failed entries.
+
+## Incident Workspace
+
+Each incident has dedicated tabs:
+
+| Tab | Purpose |
+| --- | --- |
+| Overview | Status progression, incident summary, business impact, root cause, resolution, next action, and detailed incident fields. |
+| Timeline | Chronological audit trail and manual timeline notes. |
+| Actions | Editable action table with start/end, owner, status, and latest update. |
+| War Room | Bridge URL plus grouped people tables for MIM, technical team, vendors, SMEs, and decision makers. |
+| Communications | Template-based stakeholder messages, shown when applicable for the incident severity. |
+
+Reports use the user-entered `Incident No` from the Overview details wherever possible, including the overview section and footer.
 
 ## Project Structure
 

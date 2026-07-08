@@ -71,15 +71,42 @@ const Storage = (() => {
   function normalizeAction(action) {
     const raw = asRecord(action);
     const updatedAt = asTimestamp(raw.updatedAt, new Date().toISOString());
+    const status = ['in-progress', 'completed', 'kiv'].includes(raw.status)
+      ? raw.status
+      : (raw.done === true ? 'completed' : 'in-progress');
     return {
       id: asString(raw.id) || generateId(),
       text: asString(raw.text, 'Imported action'),
       owner: asString(raw.owner),
-      done: raw.done === true,
+      status,
+      done: raw.done === true || status === 'completed',
+      startedAt: raw.startedAt ? asTimestamp(raw.startedAt, updatedAt) : updatedAt,
+      endedAt: raw.endedAt ? asTimestamp(raw.endedAt, null) : null,
+      startText: asString(raw.startText),
+      endText: asString(raw.endText),
+      update: asString(raw.update),
       updatedAt,
       deleted: raw.deleted === true,
       deletedAt: raw.deletedAt ? asTimestamp(raw.deletedAt, updatedAt) : null,
     };
+  }
+
+  function normalizeWarRoomEntry(entry) {
+    const raw = asRecord(entry);
+    return {
+      id: asString(raw.id) || generateId(),
+      name: asString(raw.name),
+      role: asString(raw.role),
+    };
+  }
+
+  function normalizeWarRoomGroups(groups) {
+    const raw = asRecord(groups);
+    const normalized = {};
+    for (const [key, entries] of Object.entries(raw)) {
+      normalized[key] = Array.isArray(entries) ? entries.map(normalizeWarRoomEntry) : [];
+    }
+    return normalized;
   }
 
   function normalizeIncident(incident) {
@@ -115,11 +142,17 @@ const Storage = (() => {
         serviceOwner: asString(team.serviceOwner),
         vendorContact: asString(team.vendorContact),
       },
+      warRoom: normalizeWarRoomGroups(raw.warRoom),
+      warRoomBridgeUrl: asString(raw.warRoomBridgeUrl),
       fieldUpdatedAt: asRecord(raw.fieldUpdatedAt),
       teamUpdatedAt: asRecord(raw.teamUpdatedAt),
       comms: Array.isArray(raw.comms) ? raw.comms : [],
+      details: asRecord(raw.details),
+      errorSummary: asString(raw.errorSummary),
+      businessImpact: asString(raw.businessImpact),
       rootCause: asString(raw.rootCause),
       resolution: asString(raw.resolution),
+      nextAction: asString(raw.nextAction),
     };
   }
 
@@ -379,7 +412,7 @@ const Storage = (() => {
   }
 
   function mergeConflictTimeline(local, remote, merged, preferRemote) {
-    const fields = ['title', 'priority', 'severity', 'impact', 'services', 'description', 'status', 'commander', 'resolvedAt', 'rootCause', 'resolution'];
+    const fields = incidentScalarFields();
     const entries = [...merged.timeline];
     const existingIds = new Set(entries.map((entry) => entry.id));
 
@@ -424,7 +457,7 @@ const Storage = (() => {
       teamUpdatedAt: mergeFieldUpdatedAt(local.teamUpdatedAt, remote.teamUpdatedAt),
       comms: preferRemote ? remote.comms : local.comms,
     };
-    for (const field of ['title', 'priority', 'severity', 'impact', 'services', 'description', 'status', 'commander', 'resolvedAt', 'rootCause', 'resolution']) {
+    for (const field of incidentScalarFields()) {
       merged[field] = mergeScalarField(local, remote, field, preferRemote);
     }
     merged.timeline = mergeConflictTimeline(local, remote, merged, preferRemote);
@@ -622,6 +655,26 @@ const Storage = (() => {
     return `MI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   }
 
+  function incidentScalarFields() {
+    return [
+      'title',
+      'priority',
+      'severity',
+      'impact',
+      'services',
+      'description',
+      'status',
+      'commander',
+      'resolvedAt',
+      'errorSummary',
+      'businessImpact',
+      'rootCause',
+      'resolution',
+      'nextAction',
+      'warRoomBridgeUrl',
+    ];
+  }
+
   function createIncident(fields) {
     const now = new Date().toISOString();
     return {
@@ -647,11 +700,11 @@ const Storage = (() => {
         },
       ],
       actions: [
-        { id: generateId(), text: 'Establish war room bridge', owner: 'MIM', done: false, updatedAt: now, deleted: false, deletedAt: null },
-        { id: generateId(), text: 'Notify executive stakeholders', owner: 'Comms Lead', done: false, updatedAt: now, deleted: false, deletedAt: null },
-        { id: generateId(), text: 'Assign technical investigation lead', owner: 'MIM', done: false, updatedAt: now, deleted: false, deletedAt: null },
-        { id: generateId(), text: 'Begin customer impact assessment', owner: 'Service Owner', done: false, updatedAt: now, deleted: false, deletedAt: null },
-        { id: generateId(), text: 'Draft initial status communication', owner: 'Comms Lead', done: false, updatedAt: now, deleted: false, deletedAt: null },
+        { id: generateId(), text: 'Establish war room bridge', owner: 'MIM', status: 'in-progress', done: false, startedAt: now, endedAt: null, startText: '', endText: '', update: '', updatedAt: now, deleted: false, deletedAt: null },
+        { id: generateId(), text: 'Notify executive stakeholders', owner: 'Comms Lead', status: 'in-progress', done: false, startedAt: now, endedAt: null, startText: '', endText: '', update: '', updatedAt: now, deleted: false, deletedAt: null },
+        { id: generateId(), text: 'Assign technical investigation lead', owner: 'MIM', status: 'in-progress', done: false, startedAt: now, endedAt: null, startText: '', endText: '', update: '', updatedAt: now, deleted: false, deletedAt: null },
+        { id: generateId(), text: 'Begin customer impact assessment', owner: 'Service Owner', status: 'in-progress', done: false, startedAt: now, endedAt: null, startText: '', endText: '', update: '', updatedAt: now, deleted: false, deletedAt: null },
+        { id: generateId(), text: 'Draft initial status communication', owner: 'Comms Lead', status: 'in-progress', done: false, startedAt: now, endedAt: null, startText: '', endText: '', update: '', updatedAt: now, deleted: false, deletedAt: null },
       ],
       team: {
         incidentCommander: fields.commander || '',
@@ -661,6 +714,8 @@ const Storage = (() => {
         serviceOwner: '',
         vendorContact: '',
       },
+      warRoom: {},
+      warRoomBridgeUrl: '',
       fieldUpdatedAt: {
         title: now,
         priority: now,
@@ -671,8 +726,12 @@ const Storage = (() => {
         status: now,
         commander: now,
         resolvedAt: now,
+        errorSummary: now,
+        businessImpact: now,
         rootCause: now,
         resolution: now,
+        nextAction: now,
+        warRoomBridgeUrl: now,
       },
       teamUpdatedAt: {
         incidentCommander: now,
@@ -683,8 +742,12 @@ const Storage = (() => {
         vendorContact: now,
       },
       comms: [],
+      details: {},
+      errorSummary: '',
+      businessImpact: '',
       rootCause: '',
       resolution: '',
+      nextAction: '',
     };
   }
 

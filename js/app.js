@@ -26,6 +26,28 @@ const App = (() => {
     resolved: ['monitoring'],
   };
 
+  const DETAIL_FIELDS = [
+    { key: 'incidentNo', label: 'Incident No', type: 'text', placeholder: 'new inc' },
+    { key: 'priority', label: 'Priority', type: 'priority' },
+    { key: 'downTime', label: 'Down Time JST', type: 'datetime' },
+    { key: 'raised', label: 'Incident Raised Date & Time', type: 'datetime' },
+    { key: 'priorityJust', label: 'Priority Justification', type: 'text' },
+    { key: 'upgraded', label: 'Incident Upgraded Time JST', type: 'datetime' },
+    { key: 'detection', label: 'Detection Time', type: 'datetime' },
+    { key: 'upTime', label: 'Up Time JST', type: 'datetime' },
+    { key: 'reportTime', label: 'Report Time JST', type: 'datetime' },
+    { key: 'reportedBy', label: 'Reported By', type: 'text' },
+    { key: 'bridgeOpen', label: 'Bridge Open Time JST', type: 'datetime' },
+    { key: 'detectedMon', label: 'Detected By Monitoring', type: 'text' },
+    { key: 'bridgeClosed', label: 'Bridge Closed Time JST', type: 'datetime' },
+    { key: 'impServices', label: 'Impacted Services', type: 'textarea' },
+    { key: 'impCompany', label: 'Impacted Company', type: 'text' },
+    { key: 'impUsers', label: 'Impacted Users', type: 'text' },
+    { key: 'ci', label: 'CI', type: 'textarea' },
+    { key: 'problemTk', label: 'Problem Ticket', type: 'text' },
+    { key: 'changeTk', label: 'Change Ticket', type: 'text' },
+  ];
+
   const PLAYBOOKS = [
     {
       title: 'Initial Declaration',
@@ -330,6 +352,20 @@ const App = (() => {
         $(`#tab-${currentTab}`).classList.add('active');
       });
     });
+
+    $('#btn-export-menu')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      $('#export-menu')?.classList.toggle('open');
+    });
+    $('#btn-export-report-menu')?.addEventListener('click', () => {
+      $('#export-menu')?.classList.remove('open');
+      exportIncidentReport();
+    });
+    $('#btn-export-report-txt-menu')?.addEventListener('click', () => {
+      $('#export-menu')?.classList.remove('open');
+      exportIncidentReportText();
+    });
+    document.addEventListener('click', () => $('#export-menu')?.classList.remove('open'));
   }
 
   function restoreActiveTab() {
@@ -339,6 +375,13 @@ const App = (() => {
     $$('.tab-panel').forEach((p) => {
       p.classList.toggle('active', p.id === `tab-${currentTab}`);
     });
+  }
+
+  function updateDetailTabVisibility(incident) {
+    const commsTab = $('.detail-tabs .tab[data-tab="comms"]');
+    const hideComms = ['s4', 's5'].includes(incident.severity);
+    commsTab?.classList.toggle('hidden', hideComms);
+    if (hideComms && currentTab === 'comms') currentTab = 'overview';
   }
 
   function saveSettings() {
@@ -565,52 +608,57 @@ const App = (() => {
     $('#page-subtitle').textContent = incident.id;
 
     const isResolved = incident.status === 'resolved';
+    const details = incident.details || {};
+    const severityNumber = severityNumberOf(incident.severity);
+    const impactedCompany = details.impCompany || '—';
 
     $('#detail-header').innerHTML = `
+      <div class="detail-utils">
+        <div class="zoom-ctl"><button class="zoom-btn" type="button">−</button><span class="zoom-val">100%</span><button class="zoom-btn" type="button">+</button></div>
+        <button class="util-btn" type="button">☀ Light</button>
+      </div>
       <div class="detail-header-top">
-        <div>
-          <h2>${esc(incident.title)}</h2>
-          <div class="detail-meta-row" style="margin-top:12px">
-            <div class="detail-meta-item">
-              <span>Priority</span>
-              <span data-meta="priority" class="badge ${Labels.priorityBadgeClass(incident.priority)}">${Labels.priorityLabel(incident.priority)}</span>
-            </div>
-            <div class="detail-meta-item">
-              <span>Severity</span>
-              <span data-meta="severity" class="badge ${Labels.severityBadgeClass(incident.severity)}">${Labels.severityLabel(incident.severity)}</span>
-            </div>
+        <div class="detail-title-block">
+          <div class="detail-title-wrap">
+            <span class="detail-title-prefix">Sev ${severityNumber} - </span>
+            <input class="detail-title-input" id="detail-title" value="${esc(incident.title)}" aria-label="Incident title">
+          </div>
+          <div class="detail-meta-row">
             <div class="detail-meta-item">
               <span>Status</span>
-              <span class="badge badge-status badge-${incident.status}">${STATUS_LABELS[incident.status]}</span>
+              <span class="status-badge badge-${incident.status}">${STATUS_LABELS[incident.status]}</span>
             </div>
             <div class="detail-meta-item">
-              <span>Impact</span>
-              <span>${esc(capitalize(incident.impact))}</span>
+              <span>Impacted Company</span>
+              <span data-meta="impacted-company">${esc(impactedCompany)}</span>
             </div>
             <div class="detail-meta-item">
               <span>Duration</span>
-              <span class="duration-live" id="live-duration">${formatDuration(incident.createdAt, incident.resolvedAt)}</span>
+              <span class="duration-live ${isResolved ? 'resolved' : ''}" id="live-duration">${formatDuration(incident.createdAt, incident.resolvedAt)}</span>
             </div>
             <div class="detail-meta-item">
               <span>MIM</span>
-              <span data-meta="mim">${esc(incident.commander || '—')}</span>
+              <input class="detail-mini-input" id="detail-mim" value="${esc(incident.commander || '')}" placeholder="Unassigned" aria-label="Major Incident Manager">
             </div>
           </div>
         </div>
         <div class="detail-header-actions">
-          <button class="btn btn-secondary btn-sm" id="btn-export-report-detail">Export HTML</button>
-          <button class="btn btn-ghost btn-sm" id="btn-export-report-txt-detail">Export Text</button>
           ${isResolved
-            ? '<button class="btn btn-primary btn-sm" id="btn-reopen">Reopen</button>'
+            ? '<button class="btn btn-secondary btn-sm btn-resolved" id="btn-reopen" disabled>Resolved</button>'
             : `<button class="btn btn-primary btn-sm" id="btn-resolve" ${canTransition(incident.status, 'resolved') ? '' : 'disabled'}>Mark Resolved</button>`}
           <button class="btn btn-ghost btn-sm" id="btn-delete-mi">Delete</button>
         </div>
       </div>`;
 
-    $('#btn-export-report-detail')?.addEventListener('click', exportIncidentReport);
-    $('#btn-export-report-txt-detail')?.addEventListener('click', exportIncidentReportText);
+    $('#detail-title')?.addEventListener('input', () => scheduleOverviewSave(incident.id));
+    $('#detail-title')?.addEventListener('change', () => saveOverview(incident.id, true));
+    $('#detail-mim')?.addEventListener('input', () => {
+      const overviewCommander = $('#ov-commander');
+      if (overviewCommander) overviewCommander.value = $('#detail-mim').value;
+      scheduleOverviewSave(incident.id);
+    });
+    $('#detail-mim')?.addEventListener('change', () => saveOverview(incident.id, true));
     $('#btn-resolve')?.addEventListener('click', () => resolveIncident(incident.id));
-    $('#btn-reopen')?.addEventListener('click', () => reopenIncident(incident.id));
     $('#btn-delete-mi')?.addEventListener('click', () => confirmDelete(incident.id));
 
     if (userIsEditing && currentTab === 'overview') {
@@ -622,28 +670,23 @@ const App = (() => {
     if (!(userIsEditing && currentTab === 'actions')) renderActions(incident);
     if (!(userIsEditing && currentTab === 'team')) renderTeam(incident);
     renderComms(incident);
+    updateDetailTabVisibility(incident);
     restoreActiveTab();
   }
 
   function renderOverviewHeader(incident) {
     const isResolved = incident.status === 'resolved';
-    const statusEl = $('#detail-header .badge-status');
+    const statusEl = $('#detail-header .status-badge');
     if (statusEl) {
-      statusEl.className = `badge badge-status badge-${incident.status}`;
+      statusEl.className = `status-badge badge-${incident.status}`;
       statusEl.textContent = STATUS_LABELS[incident.status];
     }
-    const priorityEl = $('#detail-header [data-meta="priority"]');
-    if (priorityEl) {
-      priorityEl.className = `badge ${Labels.priorityBadgeClass(incident.priority)}`;
-      priorityEl.textContent = Labels.priorityLabel(incident.priority);
-    }
-    const severityEl = $('#detail-header [data-meta="severity"]');
-    if (severityEl) {
-      severityEl.className = `badge ${Labels.severityBadgeClass(incident.severity)}`;
-      severityEl.textContent = Labels.severityLabel(incident.severity);
-    }
-    const mimEl = $('#detail-header [data-meta="mim"]');
-    if (mimEl) mimEl.textContent = incident.commander || '—';
+    const titleInput = $('#detail-title');
+    if (titleInput && document.activeElement !== titleInput) titleInput.value = incident.title;
+    const mimInput = $('#detail-mim');
+    if (mimInput && document.activeElement !== mimInput) mimInput.value = incident.commander || '';
+    const companyEl = $('#detail-header [data-meta="impacted-company"]');
+    if (companyEl) companyEl.textContent = incident.details?.impCompany || '—';
     $('#btn-resolve')?.toggleAttribute('disabled', !canTransition(incident.status, 'resolved'));
     if (!isResolved && !$('#btn-resolve')) {
       $('.detail-header-actions')?.insertAdjacentHTML('afterbegin',
@@ -654,92 +697,248 @@ const App = (() => {
 
   function renderOverview(incident) {
     const panel = $('#tab-overview');
+    const nextOpenAction = (incident.actions || []).find((a) => !a.deleted && !a.done)?.text || '';
     panel.innerHTML = `
-      <div class="overview-grid">
-        <div class="overview-card">
-          <h4>Status Progression</h4>
-          <div class="status-flow">
+      <section class="mi-card mi-status-card">
+        <div class="mi-card-title">Status Progression</div>
+        <div class="status-flow">
             ${STATUS_ORDER.map((s) => `
               <button class="status-btn ${incident.status === s ? 'current' : ''}" data-status="${s}" ${canTransition(incident.status, s) ? '' : 'disabled'}>
                 ${STATUS_LABELS[s]}
               </button>
             `).join('')}
+        </div>
+      </section>
+
+      <div class="mi-overview-grid">
+        <section class="mi-card">
+          <div class="mi-card-title">Incident Summary</div>
+          <div class="summary-block">
+            <div class="summary-head">Summary</div>
+            <label class="summary-label" for="ov-description">Short Description</label>
+            <textarea class="textarea summary-textarea" id="ov-description" rows="3" placeholder="On 5th June 2026, Application team reported,,,">${esc(incident.description)}</textarea>
+            <label class="summary-label" for="ov-error">Error</label>
+            <textarea class="textarea summary-textarea" id="ov-error" rows="3" placeholder="Error: ** if has **">${esc(incident.errorSummary || '')}</textarea>
           </div>
-        </div>
-        <div class="overview-card">
-          <h4>Classification</h4>
-          <div class="form-row" style="margin-bottom:0">
-            <div class="form-group">
-              <label for="ov-priority">Priority</label>
-              <select id="ov-priority" class="select">${buildPriorityOptions(incident.priority)}</select>
-            </div>
-            <div class="form-group">
-              <label for="ov-severity">Severity</label>
-              <select id="ov-severity" class="select">${buildSeverityOptions(incident.severity)}</select>
-            </div>
+          <div class="summary-block">
+            <div class="summary-head">Impact</div>
+            <textarea class="textarea" id="ov-business-impact" rows="2" placeholder="Business impact of the incident">${esc(incident.businessImpact || '')}</textarea>
           </div>
-        </div>
-        <div class="overview-card">
-          <h4>Affected Services</h4>
-          <input type="text" class="input" id="ov-services" value="${esc(incident.services)}" placeholder="Comma-separated services">
-        </div>
-        <div class="overview-card" style="grid-column: 1 / -1">
-          <h4>Initial Assessment</h4>
-          <textarea class="textarea" id="ov-description" rows="3">${esc(incident.description)}</textarea>
-        </div>
-        <div class="overview-card">
-          <h4>Root Cause</h4>
-          <textarea class="textarea" id="ov-rootcause" rows="3" placeholder="Document root cause when known">${esc(incident.rootCause || '')}</textarea>
-        </div>
-        <div class="overview-card">
-          <h4>Resolution Summary</h4>
-          <textarea class="textarea" id="ov-resolution" rows="3" placeholder="How was the incident resolved?">${esc(incident.resolution || '')}</textarea>
-        </div>
+          <div class="summary-block">
+            <div class="summary-head">Root Cause</div>
+            <textarea class="textarea" id="ov-rootcause" rows="2" placeholder="Document root cause when known">${esc(incident.rootCause || '')}</textarea>
+          </div>
+          <div class="summary-block">
+            <div class="summary-head">Resolution</div>
+            <textarea class="textarea" id="ov-resolution" rows="2" placeholder="How was the incident resolved?">${esc(incident.resolution || '')}</textarea>
+          </div>
+          <div class="summary-block">
+            <div class="summary-head">Next Action Item</div>
+            <textarea class="textarea" id="ov-next-action" rows="2" placeholder="What happens next?">${esc(incident.nextAction || nextOpenAction)}</textarea>
+          </div>
+        </section>
+
+        <section class="mi-card">
+          <div class="mi-card-title">Incident Details</div>
+          <div class="detail-list">
+            ${DETAIL_FIELDS.map((field) => renderDetailField(incident, field)).join('')}
+          </div>
+        </section>
       </div>`;
 
     panel.querySelectorAll('.status-btn').forEach((btn) => {
       btn.addEventListener('click', () => updateStatus(incident.id, btn.dataset.status));
     });
 
-    ['ov-priority', 'ov-severity'].forEach((id) => {
-      $(`#${id}`)?.addEventListener('change', () => saveOverview(incident.id, true));
-    });
-
-    ['ov-services', 'ov-description', 'ov-rootcause', 'ov-resolution'].forEach((id) => {
+    ['ov-description', 'ov-error', 'ov-business-impact', 'ov-rootcause', 'ov-resolution', 'ov-next-action'].forEach((id) => {
       const el = $(`#${id}`);
-      el?.addEventListener('input', () => scheduleOverviewSave(incident.id));
+      el?.addEventListener('input', () => {
+        scheduleOverviewSave(incident.id);
+      });
       el?.addEventListener('change', () => saveOverview(incident.id));
     });
+
+    bindDetailFields(incident);
+  }
+
+  function renderDetailField(incident, field) {
+    const value = detailValue(incident, field);
+    if (field.type === 'priority') {
+      return `
+        <div class="detail-row">
+          <label class="detail-label" for="detail-${field.key}">${field.label}</label>
+          <select id="detail-${field.key}" class="select incident-detail-field" data-detail-key="${field.key}" data-detail-type="${field.type}">
+            ${buildPrioritySeverityOptions(incident.priority, incident.severity)}
+          </select>
+        </div>`;
+    }
+    if (field.type === 'datetime') {
+      const dt = normalizeDetailDateTime(value, incident.createdAt);
+      return `
+        <div class="detail-row">
+          <label class="detail-label" for="detail-${field.key}-date">${field.label}</label>
+          <div class="datetime-field">
+            <input type="date" id="detail-${field.key}-date" class="incident-detail-field" data-detail-key="${field.key}" data-detail-type="${field.type}" data-part="date" value="${esc(dt.date)}">
+            <input type="text" class="time-input incident-detail-field" data-detail-key="${field.key}" data-detail-type="${field.type}" data-part="time" value="${esc(dt.time)}" placeholder="HH:MM" maxlength="5">
+            <span>JST</span>
+          </div>
+        </div>`;
+    }
+    const Tag = field.type === 'textarea' ? 'textarea' : 'input';
+    const attrs = field.type === 'textarea'
+      ? `rows="1">${esc(value || '')}</textarea>`
+      : `type="text" value="${esc(value || '')}" placeholder="${esc(field.placeholder || '-')}" />`;
+    return `
+      <div class="detail-row">
+        <label class="detail-label" for="detail-${field.key}">${field.label}</label>
+        <${Tag} id="detail-${field.key}" class="input incident-detail-field" data-detail-key="${field.key}" data-detail-type="${field.type}" ${attrs}
+      </div>`;
+  }
+
+  function bindDetailFields(incident) {
+    $$('.incident-detail-field').forEach((field) => {
+      field.addEventListener('input', () => {
+        if (field.dataset.detailKey === 'impCompany') {
+          const companyEl = $('#detail-header [data-meta="impacted-company"]');
+          if (companyEl) companyEl.textContent = field.value.trim() || '—';
+        }
+      });
+      field.addEventListener('change', () => saveDetailField(incident.id, field));
+    });
+  }
+
+  function saveDetailField(incidentId, fieldEl) {
+    const incident = Storage.getIncident(data, incidentId);
+    if (!incident) return;
+    incident.details = incident.details || {};
+    const key = fieldEl.dataset.detailKey;
+    const type = fieldEl.dataset.detailType;
+    const changedAt = new Date().toISOString();
+    const previousValue = JSON.stringify(incident.details[key] || '');
+
+    if (type === 'datetime') {
+      const date = $(`[data-detail-key="${key}"][data-part="date"]`)?.value || '';
+      const time = $(`[data-detail-key="${key}"][data-part="time"]`)?.value || '';
+      incident.details[key] = { date, time };
+    } else {
+      incident.details[key] = fieldEl.value.trim();
+    }
+    if (JSON.stringify(incident.details[key] || '') === previousValue) return;
+
+    if (key === 'priority') {
+      const [priority, severity] = fieldEl.value.split('|');
+      incident.priority = priority;
+      incident.severity = severity;
+      incident.fieldUpdatedAt = { ...(incident.fieldUpdatedAt || {}), priority: changedAt, severity: changedAt };
+    }
+    if (key === 'impServices') {
+      incident.services = fieldEl.value.trim();
+      incident.fieldUpdatedAt = { ...(incident.fieldUpdatedAt || {}), services: changedAt };
+    }
+    if (key === 'impCompany') {
+      const companyEl = $('#detail-header [data-meta="impacted-company"]');
+      if (companyEl) companyEl.textContent = fieldEl.value.trim() || '—';
+    }
+
+    incident.updatedAt = changedAt;
+    addSystemTimelineEntry(incident, `Incident detail updated: ${detailFieldLabel(key)}`, changedAt);
+    Storage.upsertIncident(data, incident);
+    data = Storage.load();
+    if (key === 'priority') renderDetail();
+    else updateSyncStatus();
+  }
+
+  function detailValue(incident, field) {
+    const details = incident.details || {};
+    if (field.key === 'incidentNo') return details.incidentNo || incident.id;
+    if (field.key === 'priority') return details.priority || `${incident.priority}|${incident.severity}`;
+    if (field.key === 'impServices') return details.impServices || incident.services || '';
+    return details[field.key] || '';
+  }
+
+  function detailFieldLabel(key) {
+    return DETAIL_FIELDS.find((field) => field.key === key)?.label || key;
+  }
+
+  function buildPrioritySeverityOptions(priority, severity) {
+    const selected = `${priority}|${severity}`;
+    const options = [];
+    for (const p of Labels.PRIORITIES) {
+      for (const s of Labels.SEVERITIES) {
+        options.push(`<option value="${p}|${s}" ${selected === `${p}|${s}` ? 'selected' : ''}>Priority ${p.slice(1)} - Severity ${s.slice(1)}</option>`);
+      }
+    }
+    return options.join('');
+  }
+
+  function normalizeDetailDateTime(value, fallbackIso) {
+    if (value && typeof value === 'object') {
+      return { date: value.date || toDateInput(fallbackIso), time: value.time || '' };
+    }
+    return { date: toDateInput(fallbackIso), time: '' };
   }
 
   function scheduleOverviewSave(id) {
     clearTimeout(overviewSaveTimer);
-    overviewSaveTimer = setTimeout(() => saveOverview(id), 500);
+    overviewSaveTimer = setTimeout(() => saveOverview(id, false, false), 500);
   }
 
-  function saveOverview(id, refreshHeader = false) {
+  function saveOverview(id, refreshHeader = false, logTimeline = true) {
     const incident = Storage.getIncident(data, id);
     if (!incident) return;
     const nextValues = {
+      title: $('#detail-title')?.value.trim() || incident.title,
       priority: $('#ov-priority')?.value || incident.priority,
       severity: $('#ov-severity')?.value || incident.severity,
+      impact: $('#ov-impact')?.value || incident.impact,
       services: $('#ov-services')?.value.trim() ?? incident.services,
       description: $('#ov-description')?.value.trim() ?? incident.description,
+      errorSummary: $('#ov-error')?.value.trim() ?? incident.errorSummary,
+      businessImpact: $('#ov-business-impact')?.value.trim() ?? incident.businessImpact,
       rootCause: $('#ov-rootcause')?.value.trim() ?? incident.rootCause,
       resolution: $('#ov-resolution')?.value.trim() ?? incident.resolution,
+      nextAction: $('#ov-next-action')?.value.trim() ?? incident.nextAction,
+      commander: ($('#detail-mim')?.value ?? $('#ov-commander')?.value ?? incident.commander).trim(),
     };
     const changedAt = new Date().toISOString();
     incident.fieldUpdatedAt = incident.fieldUpdatedAt || {};
+    const changedFields = [];
     for (const [field, value] of Object.entries(nextValues)) {
       if (incident[field] !== value) {
         incident[field] = value;
         incident.fieldUpdatedAt[field] = changedAt;
+        changedFields.push(field);
       }
     }
+    if (logTimeline && changedFields.length) {
+      addSystemTimelineEntry(incident, `Overview updated: ${changedFields.map(overviewFieldLabel).join(', ')}`, changedAt);
+    }
+    incident.team = incident.team || {};
+    incident.team.incidentCommander = incident.commander;
+    incident.teamUpdatedAt = incident.teamUpdatedAt || {};
+    incident.teamUpdatedAt.incidentCommander = changedAt;
     Storage.upsertIncident(data, incident);
     data = Storage.load();
     updateSyncStatus();
     if (refreshHeader) renderOverviewHeader(Storage.getIncident(data, id));
+  }
+
+  function overviewFieldLabel(field) {
+    const labels = {
+      title: 'Title',
+      priority: 'Priority',
+      severity: 'Severity',
+      impact: 'Impact scope',
+      services: 'Affected services',
+      description: 'Short description',
+      errorSummary: 'Error',
+      businessImpact: 'Business impact',
+      rootCause: 'Root cause',
+      resolution: 'Resolution',
+      nextAction: 'Next action item',
+      commander: 'MIM',
+    };
+    return labels[field] || field;
   }
 
   function updateStatus(id, status) {
@@ -795,22 +994,28 @@ const App = (() => {
     const entries = [...(incident.timeline || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     panel.innerHTML = `
-      <div class="timeline">
-        ${entries.map((e) => `
-          <div class="timeline-entry ${e.type || ''}">
-            <div class="timeline-entry-header">
-              <span class="timeline-entry-time">${formatDateTime(e.timestamp)}</span>
-              ${e.author ? `<span class="timeline-entry-author">${esc(e.author)}</span>` : ''}
-            </div>
-            <div class="timeline-entry-text">${esc(e.text)}</div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="timeline-add">
-        <input type="text" class="input" id="timeline-input" placeholder="Add timeline entry…">
-        <input type="text" class="input" id="timeline-author" placeholder="Your name" style="max-width:140px">
-        <button class="btn btn-primary btn-sm" id="btn-add-timeline">Add</button>
-      </div>`;
+      <section class="mi-card">
+        <div class="mi-card-title">Timeline</div>
+        <div class="mi-table-wrap">
+          <table class="mi-table timeline-table">
+            <thead><tr><th>Time</th><th>Author</th><th>Entry</th></tr></thead>
+            <tbody>
+              ${entries.length ? entries.map((e) => `
+                <tr>
+                  <td class="mono nowrap">${formatDateTime(e.timestamp)}</td>
+                  <td class="timeline-author ${e.type === 'system' ? 'system' : ''}">${esc(e.author || 'Analyst')}</td>
+                  <td>${esc(e.text)}</td>
+                </tr>
+              `).join('') : '<tr><td colspan="3" class="empty-table">No timeline entries yet.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        <div class="mi-add-row">
+          <input type="text" class="input" id="timeline-input" placeholder="Add timeline note...">
+          <input type="text" class="input owner-input" id="timeline-author" placeholder="Author" value="Analyst">
+          <button class="btn btn-primary btn-sm" id="btn-add-timeline">Add</button>
+        </div>
+      </section>`;
 
     $('#btn-add-timeline').addEventListener('click', () => addTimelineEntry(incident.id));
     $('#timeline-input').addEventListener('keydown', (e) => {
@@ -840,14 +1045,18 @@ const App = (() => {
     toast('Timeline entry added', 'success');
   }
 
-  function addActionTimelineEntry(incident, text) {
+  function addSystemTimelineEntry(incident, text, timestamp = new Date().toISOString()) {
     incident.timeline.push({
       id: Storage.generateId(),
-      timestamp: new Date().toISOString(),
+      timestamp,
       author: 'System',
       text,
       type: 'system',
     });
+  }
+
+  function addActionTimelineEntry(incident, text) {
+    addSystemTimelineEntry(incident, text);
   }
 
   function describeAction(action) {
@@ -866,33 +1075,60 @@ const App = (() => {
     const actions = (incident.actions || []).filter((a) => !a.deleted);
 
     panel.innerHTML = `
-      <div class="action-list">
-        ${actions.map((a) => `
-          <div class="action-item ${a.done ? 'done' : ''}" data-action-id="${a.id}">
-            <input type="checkbox" class="action-checkbox" ${a.done ? 'checked' : ''}>
-            <span class="action-text">${esc(a.text)}</span>
-            ${a.owner ? `<span class="action-owner">${esc(a.owner)}</span>` : ''}
-            <button class="action-delete" title="Remove">&times;</button>
-          </div>
-        `).join('')}
-      </div>
-      <div class="action-add">
-        <input type="text" class="input" id="action-input" placeholder="New action item…">
-        <input type="text" class="input" id="action-owner" placeholder="Owner" style="max-width:120px">
-        <button class="btn btn-primary btn-sm" id="btn-add-action">Add</button>
-      </div>`;
+      <section class="mi-card">
+        <div class="mi-card-title">Action Items</div>
+        <div class="mi-add-row top">
+          <input type="text" class="input" id="action-input" placeholder="New action item...">
+          <input type="text" class="input owner-input" id="action-owner" placeholder="Owner">
+          <button class="btn btn-primary btn-sm" id="btn-add-action">Add</button>
+        </div>
+        <div class="mi-table-wrap">
+          <table class="mi-table action-table">
+            <thead>
+              <tr><th>SL</th><th>Start</th><th>End</th><th>Action</th><th>Owner</th><th>Status</th><th>Update</th><th></th></tr>
+            </thead>
+            <tbody>
+              ${actions.length ? actions.map((a, index) => `
+                <tr class="${a.done ? 'action-completed' : ''}" data-action-id="${a.id}">
+                  <td class="sl">${index + 1}</td>
+                  <td><input class="table-input time-cell-input action-field" data-field="startText" value="${esc(a.startText || formatActionTime(a.startedAt || a.updatedAt))}" placeholder="text"></td>
+                  <td><input class="table-input time-cell-input action-field" data-field="endText" value="${esc(a.endText || (a.endedAt ? formatActionTime(a.endedAt) : ''))}" placeholder="text"></td>
+                  <td><textarea class="table-input action-textarea action-field" data-field="text" rows="4">${esc(a.text)}</textarea></td>
+                  <td><input class="table-input owner-cell-input action-field" data-field="owner" value="${esc(a.owner || '')}" placeholder="Text field"></td>
+                  <td>
+                    <select class="select action-status status-${a.status || (a.done ? 'completed' : 'in-progress')}" data-field="status">
+                      <option value="in-progress" ${a.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                      <option value="completed" ${a.status === 'completed' || a.done ? 'selected' : ''}>Completed</option>
+                      <option value="kiv" ${a.status === 'kiv' ? 'selected' : ''}>KIV</option>
+                    </select>
+                  </td>
+                  <td><textarea class="table-input action-textarea action-field" data-field="update" rows="4" placeholder="Text Field">${esc(a.update || '')}</textarea></td>
+                  <td><button class="action-delete" title="Remove">&times;</button></td>
+                </tr>
+              `).join('') : '<tr><td colspan="8" class="empty-table">No action items yet.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </section>`;
 
-    panel.querySelectorAll('.action-checkbox').forEach((cb) => {
-      cb.addEventListener('change', () => {
-        const item = cb.closest('.action-item');
-        toggleAction(incident.id, item.dataset.actionId, cb.checked);
+    panel.querySelectorAll('.action-field').forEach((field) => {
+      field.addEventListener('change', () => {
+        const row = field.closest('tr');
+        updateActionField(incident.id, row.dataset.actionId, field.dataset.field, field.value);
+      });
+    });
+
+    panel.querySelectorAll('.action-status').forEach((select) => {
+      select.addEventListener('change', () => {
+        const row = select.closest('tr');
+        updateActionField(incident.id, row.dataset.actionId, 'status', select.value);
       });
     });
 
     panel.querySelectorAll('.action-delete').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const item = btn.closest('.action-item');
-        deleteAction(incident.id, item.dataset.actionId);
+        const row = btn.closest('tr');
+        deleteAction(incident.id, row.dataset.actionId);
       });
     });
 
@@ -919,6 +1155,55 @@ const App = (() => {
     refreshActionAndTimelinePanels(incidentId);
   }
 
+  function updateActionField(incidentId, actionId, field, value) {
+    const incident = Storage.getIncident(data, incidentId);
+    const action = incident?.actions?.find((a) => a.id === actionId);
+    if (!action) return;
+    const changedAt = new Date().toISOString();
+    const previousDone = action.done === true;
+    const previousValue = field === 'status' ? action.status : action[field];
+
+    if (field === 'status') {
+      action.status = value;
+      action.done = value === 'completed';
+      if (action.done && !action.endedAt) action.endedAt = changedAt;
+      if (!action.done) action.endedAt = null;
+    } else if (['text', 'owner', 'update', 'startText', 'endText'].includes(field)) {
+      action[field] = value.trim();
+    }
+
+    action.updatedAt = changedAt;
+    if ((previousValue || '') === (value.trim?.() || value || '')) {
+      renderActions(Storage.getIncident(data, incidentId));
+      return;
+    }
+    if (field === 'status' && previousDone !== action.done) {
+      addActionTimelineEntry(
+        incident,
+        action.done
+          ? `Action closed: ${describeAction(action)}`
+          : `Action reopened: ${describeAction(action)}`
+      );
+    } else {
+      addActionTimelineEntry(incident, `Action updated (${actionFieldLabel(field)}): ${describeAction(action)}`);
+    }
+    Storage.upsertIncident(data, incident);
+    data = Storage.load();
+    renderActions(Storage.getIncident(data, incidentId));
+  }
+
+  function actionFieldLabel(field) {
+    const labels = {
+      text: 'Action',
+      owner: 'Owner',
+      update: 'Update',
+      startText: 'Start',
+      endText: 'End',
+      status: 'Status',
+    };
+    return labels[field] || field;
+  }
+
   function addAction(incidentId) {
     const text = $('#action-input').value.trim();
     if (!text) return;
@@ -930,12 +1215,18 @@ const App = (() => {
       id: Storage.generateId(),
       text,
       owner: $('#action-owner').value.trim(),
+      status: 'in-progress',
       done: false,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      startText: '',
+      endText: '',
+      update: '',
       updatedAt: new Date().toISOString(),
       deleted: false,
       deletedAt: null,
     };
-    incident.actions.push(action);
+    incident.actions.unshift(action);
     addActionTimelineEntry(incident, `Action added: ${describeAction(action)}`);
 
     Storage.upsertIncident(data, incident);
@@ -960,50 +1251,143 @@ const App = (() => {
 
   function renderTeam(incident) {
     const panel = $('#tab-team');
-    const team = incident.team || {};
-    const bridge = data.settings.bridgeNumber || 'Not configured — set in Settings';
-
-    const roles = [
-      ['incidentCommander', 'Major Incident Manager'],
-      ['technicalLead', 'Technical Lead'],
-      ['commsLead', 'Communications Lead'],
-      ['scribe', 'Scribe'],
-      ['serviceOwner', 'Service Owner'],
-      ['vendorContact', 'Vendor Contact'],
+    const groups = [
+      ['mim', 'MIM'],
+      ['technicalTeam', 'Technical Team'],
+      ['vendor', 'Vendor'],
+      ['sme', 'SME'],
+      ['leadership', 'Decision Maker/PSM/Leadership'],
     ];
 
     panel.innerHTML = `
-      <div class="overview-card" style="margin-bottom:20px">
-        <h4>War Room Bridge</h4>
-        <p style="font-family:var(--mono);font-size:1.1rem;color:var(--accent)">${esc(bridge)}</p>
-        ${data.settings.orgName ? `<p class="text-muted">${esc(data.settings.orgName)}</p>` : ''}
-      </div>
-      <div class="role-grid">
-        ${roles.map(([key, label]) => `
-          <div class="role-card">
-            <h5>${label}</h5>
-            <input type="text" class="input team-field" data-role="${key}" value="${esc(team[key] || '')}" placeholder="Assign ${label.toLowerCase()}">
-          </div>
+      <section class="war-room-bridge">
+        <label for="war-room-bridge-url">Bridge URL</label>
+        <input type="url" class="input" id="war-room-bridge-url" value="${esc(incident.warRoomBridgeUrl || '')}" placeholder="Paste team meeting URL...">
+        <button class="btn btn-primary" id="war-room-join" type="button" ${incident.warRoomBridgeUrl ? '' : 'disabled'}>Join</button>
+      </section>
+      <div class="war-room-grid">
+        ${groups.map(([key, label]) => `
+          <section class="war-room-card" data-war-room-group="${key}">
+            <div class="war-room-card-header">
+              <h4>${label}</h4>
+              <button class="btn btn-ghost btn-sm war-room-add" type="button" data-group="${key}">Add Entry</button>
+            </div>
+            <table class="war-room-table">
+              <thead>
+                <tr><th></th><th>Name</th><th>Role</th></tr>
+              </thead>
+              <tbody>
+                ${warRoomEntries(incident, key).map((entry, index) => `
+                  <tr data-entry-id="${entry.id}">
+                    <td class="war-room-index">${index + 1}</td>
+                    <td><input class="input war-room-field" data-group="${key}" data-entry-id="${entry.id}" data-field="name" value="${esc(entry.name || '')}" placeholder="Name"></td>
+                    <td><input class="input war-room-field" data-group="${key}" data-entry-id="${entry.id}" data-field="role" value="${esc(entry.role || '')}" placeholder="Role"></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </section>
         `).join('')}
       </div>`;
 
-    panel.querySelectorAll('.team-field').forEach((input) => {
-      input.addEventListener('change', () => {
-        const inc = Storage.getIncident(data, incident.id);
-        if (!inc) return;
-        const changedAt = new Date().toISOString();
-        inc.teamUpdatedAt = inc.teamUpdatedAt || {};
-        inc.team[input.dataset.role] = input.value.trim();
-        inc.teamUpdatedAt[input.dataset.role] = changedAt;
-        if (input.dataset.role === 'incidentCommander') {
-          inc.commander = input.value.trim();
-          inc.fieldUpdatedAt = inc.fieldUpdatedAt || {};
-          inc.fieldUpdatedAt.commander = changedAt;
-        }
-        Storage.upsertIncident(data, inc);
-        data = Storage.load();
-      });
+    $('#war-room-bridge-url')?.addEventListener('input', (e) => {
+      $('#war-room-join')?.toggleAttribute('disabled', !e.target.value.trim());
     });
+    $('#war-room-bridge-url')?.addEventListener('change', (e) => saveWarRoomBridgeUrl(incident.id, e.target.value));
+    $('#war-room-join')?.addEventListener('click', () => openWarRoomBridge(incident.id));
+
+    panel.querySelectorAll('.war-room-field').forEach((input) => {
+      input.addEventListener('change', () => saveWarRoomField(incident.id, input));
+    });
+
+    panel.querySelectorAll('.war-room-add').forEach((btn) => {
+      btn.addEventListener('click', () => addWarRoomEntry(incident.id, btn.dataset.group));
+    });
+  }
+
+  function saveWarRoomBridgeUrl(incidentId, value) {
+    const incident = Storage.getIncident(data, incidentId);
+    if (!incident) return;
+    const nextValue = value.trim();
+    if ((incident.warRoomBridgeUrl || '') === nextValue) return;
+    incident.warRoomBridgeUrl = nextValue;
+    incident.fieldUpdatedAt = incident.fieldUpdatedAt || {};
+    incident.fieldUpdatedAt.warRoomBridgeUrl = new Date().toISOString();
+    incident.updatedAt = incident.fieldUpdatedAt.warRoomBridgeUrl;
+    addSystemTimelineEntry(incident, 'War Room bridge URL updated', incident.updatedAt);
+    Storage.upsertIncident(data, incident);
+    data = Storage.load();
+    updateSyncStatus();
+  }
+
+  function openWarRoomBridge(incidentId) {
+    const incident = Storage.getIncident(data, incidentId);
+    const url = incident?.warRoomBridgeUrl?.trim();
+    if (!url) return;
+    window.open(url, '_blank', 'noopener');
+  }
+
+  function warRoomEntries(incident, group) {
+    const entries = incident.warRoom?.[group];
+    if (Array.isArray(entries) && entries.length) return entries;
+    return [
+      { id: `${group}-1`, name: '', role: '' },
+      { id: `${group}-2`, name: '', role: '' },
+    ];
+  }
+
+  function ensureWarRoomGroup(incident, group) {
+    incident.warRoom = incident.warRoom || {};
+    if (!Array.isArray(incident.warRoom[group]) || !incident.warRoom[group].length) {
+      incident.warRoom[group] = warRoomEntries(incident, group);
+    }
+    return incident.warRoom[group];
+  }
+
+  function saveWarRoomField(incidentId, input) {
+    const incident = Storage.getIncident(data, incidentId);
+    if (!incident) return;
+    const entries = ensureWarRoomGroup(incident, input.dataset.group);
+    const entry = entries.find((item) => item.id === input.dataset.entryId);
+    if (!entry) return;
+    const nextValue = input.value.trim();
+    if ((entry[input.dataset.field] || '') === nextValue) return;
+    entry[input.dataset.field] = nextValue;
+    incident.updatedAt = new Date().toISOString();
+    addSystemTimelineEntry(
+      incident,
+      `War Room updated (${warRoomGroupLabel(input.dataset.group)} ${input.dataset.field}): ${entry.name || 'Unnamed'}${entry.role ? ` - ${entry.role}` : ''}`,
+      incident.updatedAt
+    );
+    Storage.upsertIncident(data, incident);
+    data = Storage.load();
+    updateSyncStatus();
+  }
+
+  function addWarRoomEntry(incidentId, group) {
+    const incident = Storage.getIncident(data, incidentId);
+    if (!incident) return;
+    ensureWarRoomGroup(incident, group).push({
+      id: Storage.generateId(),
+      name: '',
+      role: '',
+    });
+    incident.updatedAt = new Date().toISOString();
+    addSystemTimelineEntry(incident, `War Room entry added: ${warRoomGroupLabel(group)}`, incident.updatedAt);
+    Storage.upsertIncident(data, incident);
+    data = Storage.load();
+    renderTeam(Storage.getIncident(data, incidentId));
+  }
+
+  function warRoomGroupLabel(group) {
+    const labels = {
+      mim: 'MIM',
+      technicalTeam: 'Technical Team',
+      vendor: 'Vendor',
+      sme: 'SME',
+      leadership: 'Decision Maker/PSM/Leadership',
+    };
+    return labels[group] || group;
   }
 
   function renderComms(incident) {
@@ -1192,6 +1576,22 @@ const App = (() => {
     return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
+  function formatCompactTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  }
+
+  function formatActionTime(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
   function formatDateTime(iso) {
     return new Date(iso).toLocaleString('en-GB', {
       day: '2-digit',
@@ -1201,6 +1601,19 @@ const App = (() => {
       minute: '2-digit',
       hour12: false,
     });
+  }
+
+  function toDateInput(iso) {
+    const date = iso ? new Date(iso) : new Date();
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function severityNumberOf(severity) {
+    return String(severity || 's3').replace(/^s/i, '') || '3';
   }
 
   function capitalize(str) {
