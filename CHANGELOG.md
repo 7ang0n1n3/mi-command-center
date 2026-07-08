@@ -4,6 +4,21 @@ All notable changes to MI Command are documented here.
 
 This project follows a simple date-based changelog because it is distributed as a portable internal tool rather than a packaged release.
 
+## 2026-07-09
+
+### Changed
+
+- Moved the light/dark theme control to the top navigation and made it apply system-wide.
+- Persisted the selected theme in browser storage.
+- Darkened light-mode labels and secondary text for better readability.
+- Fixed the top-bar clock to always display JST, independent of browser timezone.
+- Updated Mark Resolved so it can close an incident directly from any non-resolved status.
+- Updated action defaults so new actions start with status `-` and blank start/end fields.
+- Filled action start time when status changes to In Progress and action end time when status changes to Completed.
+- Cleared action start/end fields when status changes back to `-` or KIV.
+- Improved timeline audit entries for incident detail and summary fields so saved values appear in the timeline immediately.
+- Updated All Incidents to display and search by the user-entered Incident No.
+
 ## 2026-07-08
 
 ### Changed

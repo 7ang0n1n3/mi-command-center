@@ -8,12 +8,14 @@ MI Command is a portable, PowerShell-driven local web app for declaring and mana
 
 - Declare Major Incidents with title, priority, severity, impact, affected services, initial assessment, and Major Incident Manager.
 - Use a top navigation layout with Dashboard, All Incidents, Playbooks, Data & Settings, and Declare Major Incident controls available across the app.
+- Switch between dark and light mode from the top navigation; the browser remembers the selected theme.
+- Show the top-bar clock in JST regardless of the user's local timezone.
 - Track status from Declared through Investigating, Mitigating, Monitoring, and Resolved.
-- Enforce one-step status transitions and record explicit reopen events from Resolved back to Monitoring.
+- Enforce one-step status transitions in the status progression control, while the header Mark Resolved button can close an incident directly.
 - Manage each incident from a detailed Overview workspace with incident summary fields, full incident details, priority/severity, impacted company, JST date/time fields, tickets, CI, and impact information.
 - Maintain a live timeline, editable action table, and War Room participant roster.
 - Add timeline audit entries when overview, incident detail, action, and War Room information changes.
-- Track action items with start, end, action, owner, status, and update fields. New action items appear at the top of the list.
+- Track action items with start, end, action, owner, status, and update fields. New action items appear at the top of the list, start with status `-`, fill start time when moved to In Progress, and fill end time when completed.
 - Capture War Room bridge URL and grouped participants for MIM, Technical Team, Vendor, SME, and Decision Maker/PSM/Leadership.
 - Generate stakeholder communications from editable templates in `comms/`.
 - Keep valid communication templates available even when one template file is missing.
@@ -101,6 +103,8 @@ Each incident has dedicated tabs:
 | Communications | Template-based stakeholder messages, shown when applicable for the incident severity. |
 
 Reports use the user-entered `Incident No` from the Overview details wherever possible, including the overview section and footer.
+
+The All Incidents table also displays and searches by the user-entered `Incident No`, falling back to the internal incident id when `Incident No` is blank.
 
 ## Project Structure
 

@@ -26,6 +26,29 @@
   --mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
 }
 
+body.light {
+  --bg-base: #eef1f5;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f4f6f9;
+  --bg-hover: #e7ebf1;
+  --border: #cfd7e2;
+  --border-subtle: #e1e7ef;
+  --text-primary: #18202b;
+  --text-secondary: #2f3b4a;
+  --text-muted: #4b5563;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-glow: rgba(37, 99, 235, 0.12);
+  --critical: #dc2626;
+  --critical-bg: rgba(220, 38, 38, 0.11);
+  --warning: #b86b00;
+  --warning-bg: rgba(245, 158, 11, 0.16);
+  --success: #16a34a;
+  --success-bg: rgba(22, 163, 74, 0.12);
+  --info: #0284c7;
+  --shadow: 0 4px 24px rgba(17, 24, 39, 0.12);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { font-size: 15px; }
@@ -136,6 +159,11 @@ body {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+.theme-toggle {
+  min-width: 78px;
+  justify-content: center;
 }
 
 .offline-badge {
@@ -873,7 +901,7 @@ body {
 .mi-card-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #cfd6de;
+  color: var(--text-primary);
   margin-bottom: 18px;
 }
 
@@ -925,7 +953,7 @@ body {
   padding: 8px 16px;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
-  color: #c4ccd6;
+  color: var(--text-secondary);
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 700;
@@ -956,7 +984,7 @@ body {
 .summary-head {
   font-weight: 700;
   font-size: 1rem;
-  color: #cfd6de;
+  color: var(--text-primary);
   margin-bottom: 9px;
 }
 
@@ -964,7 +992,7 @@ body {
   display: block;
   font-size: 0.78rem;
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: 700;
   margin: 10px 0 6px;
 }
 
@@ -992,7 +1020,7 @@ body {
 .detail-row:nth-child(odd) { background: var(--bg-elevated); }
 
 .detail-label {
-  color: #cbd3dc;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 700;
 }
@@ -1124,7 +1152,7 @@ body {
 
 .action-table th {
   padding: 0 18px 12px;
-  color: #687584;
+  color: var(--text-muted);
   letter-spacing: 0.12em;
   font-size: 0.75rem;
 }
@@ -1153,7 +1181,7 @@ body {
 .action-table td:nth-child(8) { width: 54px; }
 
 .action-table .sl {
-  color: #a6b0bd;
+  color: var(--text-muted);
   font-size: 1rem;
   font-weight: 800;
   padding-top: 21px;
@@ -1213,6 +1241,7 @@ body {
   border-color: rgba(34, 197, 94, 0.5);
 }
 
+.action-table .action-status.status-blank,
 .action-table .action-status.status-kiv {
   color: var(--text-secondary);
   border-color: var(--border);
@@ -1389,7 +1418,7 @@ body {
 }
 
 .war-room-bridge label {
-  color: #cfd6de;
+  color: var(--text-primary);
   font-size: 0.95rem;
   font-weight: 800;
   white-space: nowrap;
@@ -1434,7 +1463,7 @@ body {
 
 .war-room-card h4 {
   font-size: 1rem;
-  color: #cfd6de;
+  color: var(--text-primary);
   font-weight: 700;
 }
 
@@ -1455,7 +1484,7 @@ body {
 
 .war-room-table th {
   text-align: left;
-  color: #687584;
+  color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -1475,7 +1504,7 @@ body {
 }
 
 .war-room-index {
-  color: #7e8998;
+  color: var(--text-muted);
   font-weight: 800;
   font-size: 0.9rem;
 }

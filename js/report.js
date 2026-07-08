@@ -297,8 +297,8 @@ const Report = (() => {
     const rows = actions.map((action, index) => `
       <tr>
         <td>${index + 1}</td>
-        <td>${escapeHtml(action.startText || formatActionTime(action.startedAt))}</td>
-        <td>${escapeHtml(action.endText || formatActionTime(action.endedAt))}</td>
+        <td>${escapeHtml(actionStartValue(action))}</td>
+        <td>${escapeHtml(actionEndValue(action))}</td>
         <td>${escapeHtml(action.text || '')}</td>
         <td>${escapeHtml(action.owner || '')}</td>
         <td>${escapeHtml(actionStatusLabel(action))}</td>
@@ -422,13 +422,24 @@ const Report = (() => {
   }
 
   function actionStatusLabel(action) {
-    const status = action.status || (action.done ? 'completed' : 'in-progress');
+    const status = action.status || (action.done ? 'completed' : '');
     const labels = {
+      '': '-',
       'in-progress': 'In Progress',
       completed: 'Completed',
       kiv: 'KIV',
     };
     return labels[status] || status;
+  }
+
+  function actionStartValue(action) {
+    if (!['in-progress', 'completed'].includes(action.status)) return '';
+    return action.startText || formatActionTime(action.startedAt);
+  }
+
+  function actionEndValue(action) {
+    if (action.status !== 'completed') return '';
+    return action.endText || formatActionTime(action.endedAt);
   }
 
   function formatActionTime(iso) {
@@ -498,8 +509,8 @@ const Report = (() => {
     } else {
       actions.forEach((action, index) => {
         lines.push(`${String(index + 1).padEnd(3)} ${actionStatusLabel(action).padEnd(12)} ${action.text || '—'}`);
-        lines.push(`    Start : ${action.startText || formatActionTime(action.startedAt) || '—'}`);
-        lines.push(`    End   : ${action.endText || formatActionTime(action.endedAt) || '—'}`);
+        lines.push(`    Start : ${actionStartValue(action) || '—'}`);
+        lines.push(`    End   : ${actionEndValue(action) || '—'}`);
         lines.push(`    Owner : ${action.owner || '—'}`);
         lines.push(`    Update: ${action.update || '—'}`);
       });

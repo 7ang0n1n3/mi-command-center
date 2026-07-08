@@ -8,6 +8,8 @@ const App = (() => {
   let pendingRemoteRefresh = false;
   let lastSyncAt = null;
   let overviewSaveTimer = null;
+  const pendingOverviewAudit = new Map();
+  const THEME_KEY = 'mi-command-theme';
 
   const STATUS_LABELS = {
     declared: 'Declared',
@@ -126,6 +128,7 @@ const App = (() => {
   }
 
   async function init() {
+    applyThemePreference();
     await Storage.init(updateStorageStatus, handleRemoteUpdate);
     await Comms.load();
     data = Storage.load();
@@ -133,10 +136,33 @@ const App = (() => {
     bindDeclareForm();
     bindSettings();
     bindTabs();
+    bindThemeToggle();
     bindEditingGuards();
     updateClock();
     setInterval(updateClock, 1000);
     render();
+  }
+
+  function applyThemePreference() {
+    const theme = localStorage.getItem(THEME_KEY) || 'dark';
+    document.body.classList.toggle('light', theme === 'light');
+    updateThemeToggleLabel(theme);
+  }
+
+  function bindThemeToggle() {
+    $('#btn-theme-toggle')?.addEventListener('click', () => {
+      const nextTheme = document.body.classList.contains('light') ? 'dark' : 'light';
+      localStorage.setItem(THEME_KEY, nextTheme);
+      document.body.classList.toggle('light', nextTheme === 'light');
+      updateThemeToggleLabel(nextTheme);
+    });
+    updateThemeToggleLabel(document.body.classList.contains('light') ? 'light' : 'dark');
+  }
+
+  function updateThemeToggleLabel(theme) {
+    const btn = $('#btn-theme-toggle');
+    if (!btn) return;
+    btn.textContent = theme === 'light' ? '☾ Dark' : '☀ Light';
   }
 
   function bindEditingGuards() {
@@ -547,6 +573,7 @@ const App = (() => {
         (i) =>
           i.title.toLowerCase().includes(search) ||
           i.id.toLowerCase().includes(search) ||
+          incidentDisplayId(i).toLowerCase().includes(search) ||
           (i.services || '').toLowerCase().includes(search)
       );
     }
@@ -575,7 +602,7 @@ const App = (() => {
         <tbody>
           ${incidents.map((i) => `
             <tr data-id="${i.id}">
-              <td><code>${esc(i.id)}</code></td>
+              <td><code>${esc(incidentDisplayId(i))}</code></td>
               <td>${esc(i.title)}</td>
               <td><span class="badge ${Labels.priorityBadgeClass(i.priority)}">${Labels.priorityLabel(i.priority)}</span></td>
               <td><span class="badge ${Labels.severityBadgeClass(i.severity)}">${Labels.severityLabel(i.severity)}</span></td>
@@ -598,6 +625,10 @@ const App = (() => {
     }
   }
 
+  function incidentDisplayId(incident) {
+    return incident.details?.incidentNo || incident.id;
+  }
+
   function renderDetail() {
     const incident = Storage.getIncident(data, currentIncidentId);
     if (!incident) {
@@ -615,7 +646,6 @@ const App = (() => {
     $('#detail-header').innerHTML = `
       <div class="detail-utils">
         <div class="zoom-ctl"><button class="zoom-btn" type="button">−</button><span class="zoom-val">100%</span><button class="zoom-btn" type="button">+</button></div>
-        <button class="util-btn" type="button">☀ Light</button>
       </div>
       <div class="detail-header-top">
         <div class="detail-title-block">
@@ -645,7 +675,7 @@ const App = (() => {
         <div class="detail-header-actions">
           ${isResolved
             ? '<button class="btn btn-secondary btn-sm btn-resolved" id="btn-reopen" disabled>Resolved</button>'
-            : `<button class="btn btn-primary btn-sm" id="btn-resolve" ${canTransition(incident.status, 'resolved') ? '' : 'disabled'}>Mark Resolved</button>`}
+            : '<button class="btn btn-primary btn-sm" id="btn-resolve">Mark Resolved</button>'}
           <button class="btn btn-ghost btn-sm" id="btn-delete-mi">Delete</button>
         </div>
       </div>`;
@@ -687,10 +717,10 @@ const App = (() => {
     if (mimInput && document.activeElement !== mimInput) mimInput.value = incident.commander || '';
     const companyEl = $('#detail-header [data-meta="impacted-company"]');
     if (companyEl) companyEl.textContent = incident.details?.impCompany || '—';
-    $('#btn-resolve')?.toggleAttribute('disabled', !canTransition(incident.status, 'resolved'));
+    $('#btn-resolve')?.toggleAttribute('disabled', false);
     if (!isResolved && !$('#btn-resolve')) {
       $('.detail-header-actions')?.insertAdjacentHTML('afterbegin',
-        `<button class="btn btn-primary btn-sm" id="btn-resolve" ${canTransition(incident.status, 'resolved') ? '' : 'disabled'}>Mark Resolved</button>`);
+        '<button class="btn btn-primary btn-sm" id="btn-resolve">Mark Resolved</button>');
       $('#btn-resolve')?.addEventListener('click', () => resolveIncident(incident.id));
     }
   }
@@ -814,7 +844,9 @@ const App = (() => {
     const key = fieldEl.dataset.detailKey;
     const type = fieldEl.dataset.detailType;
     const changedAt = new Date().toISOString();
-    const previousValue = JSON.stringify(incident.details[key] || '');
+    const previousRawValue = incident.details[key];
+    const previousValue = JSON.stringify(previousRawValue || '');
+    const previousTimelineValue = detailTimelineValue(key, previousRawValue, incident);
 
     if (type === 'datetime') {
       const date = $(`[data-detail-key="${key}"][data-part="date"]`)?.value || '';
@@ -841,11 +873,19 @@ const App = (() => {
     }
 
     incident.updatedAt = changedAt;
-    addSystemTimelineEntry(incident, `Incident detail updated: ${detailFieldLabel(key)}`, changedAt);
+    addSystemTimelineEntry(
+      incident,
+      `Incident detail updated: ${detailFieldLabel(key)} changed from ${previousTimelineValue} to ${detailTimelineValue(key, incident.details[key], incident)}`,
+      changedAt
+    );
     Storage.upsertIncident(data, incident);
     data = Storage.load();
+    const savedIncident = Storage.getIncident(data, incidentId);
     if (key === 'priority') renderDetail();
-    else updateSyncStatus();
+    else {
+      refreshTimelinePanel(savedIncident);
+      updateSyncStatus();
+    }
   }
 
   function detailValue(incident, field) {
@@ -858,6 +898,21 @@ const App = (() => {
 
   function detailFieldLabel(key) {
     return DETAIL_FIELDS.find((field) => field.key === key)?.label || key;
+  }
+
+  function detailTimelineValue(key, rawValue, incident) {
+    if (key === 'priority') {
+      const [priority, severity] = String(rawValue || `${incident.priority}|${incident.severity}`).split('|');
+      return `${Labels.priorityLabel(priority)} / ${Labels.severityLabel(severity)}`;
+    }
+    if (rawValue && typeof rawValue === 'object') {
+      const date = rawValue.date || 'No date';
+      const time = rawValue.time || 'HH:MM';
+      return `${date} ${time} JST`;
+    }
+    const value = String(rawValue || '').trim();
+    if (!value) return 'blank';
+    return value.length > 120 ? `${value.slice(0, 117)}...` : value;
   }
 
   function buildPrioritySeverityOptions(priority, severity) {
@@ -910,8 +965,16 @@ const App = (() => {
         changedFields.push(field);
       }
     }
-    if (logTimeline && changedFields.length) {
-      addSystemTimelineEntry(incident, `Overview updated: ${changedFields.map(overviewFieldLabel).join(', ')}`, changedAt);
+    const pendingFields = pendingOverviewAudit.get(id) || new Set();
+    if (!logTimeline) {
+      changedFields.forEach((field) => pendingFields.add(field));
+      if (pendingFields.size) pendingOverviewAudit.set(id, pendingFields);
+    } else {
+      changedFields.forEach((field) => pendingFields.add(field));
+      if (pendingFields.size) {
+        addSystemTimelineEntry(incident, `Overview updated: ${[...pendingFields].map((field) => `${overviewFieldLabel(field)} = ${overviewTimelineValue(incident[field])}`).join('; ')}`, changedAt);
+        pendingOverviewAudit.delete(id);
+      }
     }
     incident.team = incident.team || {};
     incident.team.incidentCommander = incident.commander;
@@ -919,6 +982,7 @@ const App = (() => {
     incident.teamUpdatedAt.incidentCommander = changedAt;
     Storage.upsertIncident(data, incident);
     data = Storage.load();
+    refreshTimelinePanel(Storage.getIncident(data, id));
     updateSyncStatus();
     if (refreshHeader) renderOverviewHeader(Storage.getIncident(data, id));
   }
@@ -941,10 +1005,16 @@ const App = (() => {
     return labels[field] || field;
   }
 
-  function updateStatus(id, status) {
+  function overviewTimelineValue(value) {
+    const text = String(value || '').trim();
+    if (!text) return 'blank';
+    return text.length > 120 ? `${text.slice(0, 117)}...` : text;
+  }
+
+  function updateStatus(id, status, options = {}) {
     const incident = Storage.getIncident(data, id);
     if (!incident || incident.status === status) return;
-    if (!canTransition(incident.status, status)) {
+    if (!options.force && !canTransition(incident.status, status)) {
       toast(`Move from ${STATUS_LABELS[incident.status]} to ${STATUS_LABELS[status]} one step at a time`, 'error');
       return;
     }
@@ -982,7 +1052,7 @@ const App = (() => {
   }
 
   function resolveIncident(id) {
-    updateStatus(id, 'resolved');
+    updateStatus(id, 'resolved', { force: true });
   }
 
   function reopenIncident(id) {
@@ -1070,6 +1140,12 @@ const App = (() => {
     renderTimeline(incident);
   }
 
+  function refreshTimelinePanel(incident) {
+    if (!incident || !$('#tab-timeline')) return;
+    if (userIsEditing && currentTab === 'timeline') return;
+    renderTimeline(incident);
+  }
+
   function renderActions(incident) {
     const panel = $('#tab-actions');
     const actions = (incident.actions || []).filter((a) => !a.deleted);
@@ -1091,12 +1167,13 @@ const App = (() => {
               ${actions.length ? actions.map((a, index) => `
                 <tr class="${a.done ? 'action-completed' : ''}" data-action-id="${a.id}">
                   <td class="sl">${index + 1}</td>
-                  <td><input class="table-input time-cell-input action-field" data-field="startText" value="${esc(a.startText || formatActionTime(a.startedAt || a.updatedAt))}" placeholder="text"></td>
-                  <td><input class="table-input time-cell-input action-field" data-field="endText" value="${esc(a.endText || (a.endedAt ? formatActionTime(a.endedAt) : ''))}" placeholder="text"></td>
+                  <td><input class="table-input time-cell-input action-field" data-field="startText" value="${esc(actionStartValue(a))}" placeholder="text"></td>
+                  <td><input class="table-input time-cell-input action-field" data-field="endText" value="${esc(actionEndValue(a))}" placeholder="text"></td>
                   <td><textarea class="table-input action-textarea action-field" data-field="text" rows="4">${esc(a.text)}</textarea></td>
                   <td><input class="table-input owner-cell-input action-field" data-field="owner" value="${esc(a.owner || '')}" placeholder="Text field"></td>
                   <td>
-                    <select class="select action-status status-${a.status || (a.done ? 'completed' : 'in-progress')}" data-field="status">
+                    <select class="select action-status status-${a.status || 'blank'}" data-field="status">
+                      <option value="" ${!a.status ? 'selected' : ''}>-</option>
                       <option value="in-progress" ${a.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
                       <option value="completed" ${a.status === 'completed' || a.done ? 'selected' : ''}>Completed</option>
                       <option value="kiv" ${a.status === 'kiv' ? 'selected' : ''}>KIV</option>
@@ -1166,8 +1243,18 @@ const App = (() => {
     if (field === 'status') {
       action.status = value;
       action.done = value === 'completed';
-      if (action.done && !action.endedAt) action.endedAt = changedAt;
-      if (!action.done) action.endedAt = null;
+      if (value === 'in-progress' && !action.startedAt) action.startedAt = changedAt;
+      if (value === 'completed') {
+        if (!action.startedAt) action.startedAt = changedAt;
+        if (!action.endedAt) action.endedAt = changedAt;
+      } else {
+        action.endedAt = null;
+        action.endText = '';
+      }
+      if (!value || value === 'kiv') {
+        action.startedAt = null;
+        action.startText = '';
+      }
     } else if (['text', 'owner', 'update', 'startText', 'endText'].includes(field)) {
       action[field] = value.trim();
     }
@@ -1184,12 +1271,14 @@ const App = (() => {
           ? `Action closed: ${describeAction(action)}`
           : `Action reopened: ${describeAction(action)}`
       );
+    } else if (field === 'status') {
+      addActionTimelineEntry(incident, `Action status changed to ${actionStatusText(action.status)}: ${describeAction(action)}`);
     } else {
       addActionTimelineEntry(incident, `Action updated (${actionFieldLabel(field)}): ${describeAction(action)}`);
     }
     Storage.upsertIncident(data, incident);
     data = Storage.load();
-    renderActions(Storage.getIncident(data, incidentId));
+    refreshActionAndTimelinePanels(incidentId);
   }
 
   function actionFieldLabel(field) {
@@ -1204,6 +1293,26 @@ const App = (() => {
     return labels[field] || field;
   }
 
+  function actionStartValue(action) {
+    if (!['in-progress', 'completed'].includes(action.status)) return '';
+    return action.startText || formatActionTime(action.startedAt);
+  }
+
+  function actionEndValue(action) {
+    if (action.status !== 'completed') return '';
+    return action.endText || formatActionTime(action.endedAt);
+  }
+
+  function actionStatusText(status) {
+    const labels = {
+      '': '-',
+      'in-progress': 'In Progress',
+      completed: 'Completed',
+      kiv: 'KIV',
+    };
+    return labels[status || ''] || status;
+  }
+
   function addAction(incidentId) {
     const text = $('#action-input').value.trim();
     if (!text) return;
@@ -1215,9 +1324,9 @@ const App = (() => {
       id: Storage.generateId(),
       text,
       owner: $('#action-owner').value.trim(),
-      status: 'in-progress',
+      status: '',
       done: false,
-      startedAt: new Date().toISOString(),
+      startedAt: null,
       endedAt: null,
       startText: '',
       endText: '',
@@ -1317,6 +1426,7 @@ const App = (() => {
     addSystemTimelineEntry(incident, 'War Room bridge URL updated', incident.updatedAt);
     Storage.upsertIncident(data, incident);
     data = Storage.load();
+    refreshTimelinePanel(Storage.getIncident(data, incidentId));
     updateSyncStatus();
   }
 
@@ -1361,6 +1471,7 @@ const App = (() => {
     );
     Storage.upsertIncident(data, incident);
     data = Storage.load();
+    refreshTimelinePanel(Storage.getIncident(data, incidentId));
     updateSyncStatus();
   }
 
@@ -1376,7 +1487,9 @@ const App = (() => {
     addSystemTimelineEntry(incident, `War Room entry added: ${warRoomGroupLabel(group)}`, incident.updatedAt);
     Storage.upsertIncident(data, incident);
     data = Storage.load();
-    renderTeam(Storage.getIncident(data, incidentId));
+    const savedIncident = Storage.getIncident(data, incidentId);
+    renderTeam(savedIncident);
+    refreshTimelinePanel(savedIncident);
   }
 
   function warRoomGroupLabel(group) {
@@ -1545,7 +1658,8 @@ const App = (() => {
   function updateClock() {
     const el = $('#live-clock');
     if (el) {
-      el.textContent = new Date().toLocaleString('en-GB', {
+      const time = new Date().toLocaleString('en-GB', {
+        timeZone: 'Asia/Tokyo',
         weekday: 'short',
         day: '2-digit',
         month: 'short',
@@ -1554,6 +1668,7 @@ const App = (() => {
         second: '2-digit',
         hour12: false,
       });
+      el.textContent = `${time} JST`;
     }
   }
 
