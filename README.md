@@ -1,6 +1,6 @@
 # MI Command
 
-Offline Major Incident command dashboard for Service Desk teams.
+Offline-first Major Incident command dashboard for Service Desk teams.
 
 MI Command is a portable, PowerShell-driven local web app for declaring and managing Major Incidents during a war-room response. It runs from the project folder, writes incident data to `mi-data.json`, and can be shared with teammates on the same network from the host machine.
 
@@ -27,7 +27,7 @@ MI Command is a portable, PowerShell-driven local web app for declaring and mana
 
 - Windows 10/11
 - PowerShell 5.1 or newer
-- Chrome or Edge
+- A current version of Chrome or Edge
 
 No internet connection or external package installation is required.
 
@@ -36,7 +36,7 @@ No internet connection or external package installation is required.
 Double-click `start.bat`, or run the PowerShell launcher manually:
 
 ```powershell
-cd path\to\sd-dash
+cd path\to\mi-command-center
 .\start.ps1
 ```
 
@@ -46,7 +46,7 @@ Open the local URL shown in the console, usually:
 http://localhost:8080
 ```
 
-Incident data is saved to `mi-data.json` in the same folder.
+Incident data is saved to `mi-data.json` in the same folder. The launcher creates this runtime file on first use; `mi-data.example.json` is the empty example committed to the repository.
 
 ## Team Mode
 
@@ -56,7 +56,9 @@ Incident data is saved to `mi-data.json` in the same folder.
 
 When connected through the PowerShell server, the dashboard polls every 3 seconds and shows `Live · team sync` in the top bar.
 
-Team sync reconciles remote content changes by merging timeline entries, action records, overview fields, incident details, and War Room data. Action deletions are preserved with tombstones so older clients do not restore deleted work items.
+Team sync reconciles timeline entries by ID, action records by their update time, and core incident fields by per-field timestamps. Action deletions are preserved with tombstones so older clients do not restore deleted work items. Expanded incident details and War Room lists are selected from the newer incident snapshot rather than merged field by field.
+
+Synchronization is best-effort: the server accepts whole-file writes without locking or revision preconditions. Avoid having multiple people edit the same incident details or War Room list at the same time, and keep JSON backups for operationally important incidents.
 
 ## Custom Port
 
@@ -69,10 +71,12 @@ Team sync reconciles remote content changes by merging timeline entries, action 
 | Run mode | Storage location |
 | --- | --- |
 | `start.bat` / `start.ps1` | `mi-data.json` in the app folder |
-| `index.html` with linked file | Browser-selected JSON file |
-| `index.html` only | Browser local storage |
+| `index.html` with a file linked in Data & Settings | Browser-selected JSON file |
+| `index.html` without a linked file | Browser local storage for that browser profile and origin |
 
 The recommended mode is `start.bat` or `start.ps1` because it keeps the app and data file together.
+
+Direct file linking uses the Chromium File System Access API. If the browser does not expose that API for the way `index.html` was opened, use the PowerShell launcher. Browser local storage is a fallback, not a shared team data store; export a JSON backup before clearing site data or changing browser profiles.
 
 ## Communication Templates
 
@@ -100,7 +104,7 @@ Each incident has dedicated tabs:
 | Timeline | Chronological audit trail and manual timeline notes. |
 | Actions | Editable action table with start/end, owner, status, and latest update. |
 | War Room | Bridge URL plus grouped people tables for MIM, technical team, vendors, SMEs, and decision makers. |
-| Communications | Template-based stakeholder messages, shown when applicable for the incident severity. |
+| Communications | Template-based stakeholder messages for S1–S3 incidents. The tab is hidden for S4 and S5. |
 
 Reports use the user-entered `Incident No` from the Overview details wherever possible, including the overview section and footer.
 
@@ -109,9 +113,10 @@ The All Incidents table also displays and searches by the user-entered `Incident
 ## Project Structure
 
 ```text
-sd-dash/
+mi-command-center/
 ├── index.html
-├── mi-data.json
+├── mi-data.example.json
+├── mi-data.json                 # generated at runtime; not committed
 ├── start.bat
 ├── start.ps1
 ├── CHANGELOG.md
@@ -136,11 +141,13 @@ sd-dash/
 ## Development Notes
 
 - The app has no build step.
+- There is no automated test suite in the repository.
 - `start.ps1` serves static files and implements `/api/status` and `/api/data`.
 - `start.ps1` validates incoming `/api/data` payloads before writing to `mi-data.json`.
 - Browser code stores incident state through `js/storage.js`.
 - `js/app.js` owns rendering, view state, and incident interactions.
 - `js/report.js` builds downloadable incident reports.
+- Built-in Playbooks are defined in `js/app.js`. Files under `action-lists/` are reference material and are not loaded by the app.
 
 Run JavaScript syntax checks with:
 
@@ -155,6 +162,8 @@ node --check js/labels.js
 ## Security Notes
 
 Team mode is intended for trusted local networks. The PowerShell server exposes local incident data to users who can reach the shared URL. Avoid running it on untrusted networks unless access controls are added.
+
+The server provides no authentication, authorization, TLS, or per-user audit identity. Use host firewall rules and network controls to restrict access.
 
 ## License
 

@@ -18,6 +18,8 @@ This project follows a simple date-based changelog because it is distributed as 
 - Cleared action start/end fields when status changes back to `-` or KIV.
 - Improved timeline audit entries for incident detail and summary fields so saved values appear in the timeline immediately.
 - Updated All Incidents to display and search by the user-entered Incident No.
+- Corrected the README quick-start path and project tree to use the current repository name and distinguish the generated `mi-data.json` from `mi-data.example.json`.
+- Clarified direct-file and browser-local storage behavior, S1–S3 communication visibility, built-in Playbook configuration, validation commands, and team-mode synchronization and security boundaries.
 
 ## 2026-07-08
 
