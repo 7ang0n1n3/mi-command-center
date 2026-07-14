@@ -1,0 +1,19 @@
+ITEM : Confirm database service, cluster, and environment affected
+Owner : Database Lead
+Start : {{time}}
+Status : In Progress
+
+ITEM : Check database availability, listener status, and connection errors
+Owner : Database Lead
+
+ITEM : Review recent database alerts, slow queries, locks, and blocking sessions
+Owner : Database Lead
+
+ITEM : Validate storage, CPU, memory, replication, and backup status
+Owner : Infrastructure Lead
+
+ITEM : Confirm application connection pool health and recent deployment changes
+Owner : Application Lead
+
+ITEM : Identify mitigation path: failover, rollback, scale, kill session, or vendor escalation
+Owner : MIM

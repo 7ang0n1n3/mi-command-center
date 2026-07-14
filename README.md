@@ -92,6 +92,16 @@ Add, remove, or reorder templates in `comms/manifest.json`. Refresh the browser 
 
 If one template file is missing or invalid, the Communications tab still shows the templates that loaded successfully and displays a warning for the failed entries.
 
+## Action List Templates
+
+Action list templates are plain text files in `action-lists/` and are loaded from `action-lists/manifest.json`. The manifest controls which templates appear in the Actions tab dropdown. Each template can contain one or more action blocks separated by a blank line.
+
+Included samples are `start-of-triage.txt`, `database-triage.txt`, and `network-triage.txt`.
+
+Supported fields are `ITEM`, `Action`, or `Task` for the action text, plus optional `Owner`, `Start`, `End`, `Status`, and `Update` fields. `Status` accepts `In Progress`, `Completed`, or `KIV`.
+
+Action list templates can use placeholders such as `{{title}}`, `{{status}}`, `{{priorityLabel}}`, `{{severityLabel}}`, `{{mim}}`, `{{roombridge}}`, `{{time}}`, `{{org}}`, and `{{services}}`.
+
 ## Incident Workspace
 
 Each incident has dedicated tabs:
@@ -120,6 +130,10 @@ mi-command-center/
 ├── CHANGELOG.md
 ├── README.md
 ├── action-lists/
+│   ├── database-triage.txt
+│   ├── manifest.json
+│   ├── network-triage.txt
+│   ├── start-of-triage.txt
 │   └── triage-action-list.txt
 ├── comms/
 │   ├── manifest.json
@@ -145,7 +159,7 @@ mi-command-center/
 - Browser code stores incident state through `js/storage.js`.
 - `js/app.js` owns rendering, view state, and incident interactions.
 - `js/report.js` builds downloadable incident reports.
-- Built-in Playbooks are defined in `js/app.js`. Files under `action-lists/` are reference material and are not loaded by the app.
+- Built-in Playbooks are defined in `js/app.js`. Action list templates are loaded from `action-lists/manifest.json`.
 
 Run JavaScript syntax checks with:
 

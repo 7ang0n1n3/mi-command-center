@@ -1274,6 +1274,16 @@ body {
   min-width: 140px;
 }
 
+.mi-add-row .action-list-select {
+  flex: 0 1 220px;
+  min-width: 180px;
+}
+
+.action-list-warning {
+  margin: -10px 0 14px;
+  font-size: 0.84rem;
+}
+
 /* Timeline */
 .timeline { position: relative; padding-left: 28px; }
 

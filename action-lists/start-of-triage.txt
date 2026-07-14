@@ -11,5 +11,8 @@ ITEM : Open war room bridge
 Owner : MIM
 Update : {{roombridge}}
 
+ITEM : Capture affected services and initial impact
+Owner : Scribe
+
 ITEM : Send initial stakeholder notification
 Owner : Comms Lead

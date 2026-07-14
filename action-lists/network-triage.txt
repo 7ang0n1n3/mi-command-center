@@ -1,0 +1,19 @@
+ITEM : Confirm affected network segment, site, VPN, or service path
+Owner : Network Lead
+Start : {{time}}
+Status : In Progress
+
+ITEM : Check firewall, router, switch, load balancer, and DNS health
+Owner : Network Lead
+
+ITEM : Validate reachability with ping, traceroute, DNS lookup, and port checks
+Owner : Network Lead
+
+ITEM : Review recent network changes, firewall policy updates, and routing events
+Owner : Change Coordinator
+
+ITEM : Confirm monitoring alerts, packet loss, latency, and interface errors
+Owner : Network Lead
+
+ITEM : Escalate to carrier, ISP, or vendor if external dependency is suspected
+Owner : Vendor Manager

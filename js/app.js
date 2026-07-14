@@ -130,6 +130,7 @@ const App = (() => {
   async function init() {
     applyThemePreference();
     await Storage.init(updateStorageStatus, handleRemoteUpdate);
+    await ActionLists.load();
     await Comms.load();
     data = Storage.load();
     bindNavigation();
@@ -1149,6 +1150,18 @@ const App = (() => {
   function renderActions(incident) {
     const panel = $('#tab-actions');
     const actions = (incident.actions || []).filter((a) => !a.deleted);
+    const actionListTemplates = ActionLists.getTemplates();
+    const actionListWarnings = ActionLists.getWarnings();
+    const actionListControls = actionListTemplates.length
+      ? `
+        <select class="select action-list-select" id="action-list-select" aria-label="Action list template">
+          ${actionListTemplates.map((template) => `<option value="${esc(template.id)}">${esc(template.title)}</option>`).join('')}
+        </select>
+        <button class="btn btn-secondary btn-sm" id="btn-add-action-list" type="button">Add Template</button>`
+      : '';
+    const actionListWarningHtml = actionListWarnings.length
+      ? `<p class="action-list-warning text-muted">Some action list templates could not be loaded: ${esc(actionListWarnings.join('; '))}</p>`
+      : '';
 
     panel.innerHTML = `
       <section class="mi-card">
@@ -1157,7 +1170,9 @@ const App = (() => {
           <input type="text" class="input" id="action-input" placeholder="New action item...">
           <input type="text" class="input owner-input" id="action-owner" placeholder="Owner">
           <button class="btn btn-primary btn-sm" id="btn-add-action">Add</button>
+          ${actionListControls}
         </div>
+        ${actionListWarningHtml}
         <div class="mi-table-wrap">
           <table class="mi-table action-table">
             <thead>
@@ -1210,6 +1225,7 @@ const App = (() => {
     });
 
     $('#btn-add-action').addEventListener('click', () => addAction(incident.id));
+    $('#btn-add-action-list')?.addEventListener('click', () => addActionList(incident.id));
     $('#action-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') addAction(incident.id);
     });
@@ -1342,6 +1358,62 @@ const App = (() => {
     data = Storage.load();
     refreshActionAndTimelinePanels(incidentId);
     toast('Action added', 'success');
+  }
+
+  function addActionList(incidentId) {
+    const templateId = $('#action-list-select')?.value;
+    if (!templateId) return;
+
+    const incident = Storage.getIncident(data, incidentId);
+    if (!incident) return;
+
+    const items = ActionLists.renderTemplateItems(templateId, actionTemplateVars(incident));
+    if (!items.length) {
+      toast('Action template has no valid items', 'error');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const actions = items.map((item) => ({
+      id: Storage.generateId(),
+      text: item.text,
+      owner: item.owner || '',
+      status: item.status || '',
+      done: item.status === 'completed',
+      startedAt: item.status === 'in-progress' || item.status === 'completed' ? now : null,
+      endedAt: item.status === 'completed' ? now : null,
+      startText: item.startText || '',
+      endText: item.endText || '',
+      update: item.update || '',
+      updatedAt: now,
+      deleted: false,
+      deletedAt: null,
+    }));
+
+    incident.actions.unshift(...actions);
+    addActionTimelineEntry(incident, `Action template added: ${actions.length} item${actions.length === 1 ? '' : 's'}`);
+
+    Storage.upsertIncident(data, incident);
+    data = Storage.load();
+    refreshActionAndTimelinePanels(incidentId);
+    toast('Action template added', 'success');
+  }
+
+  function actionTemplateVars(incident) {
+    const now = new Date().toISOString();
+    return {
+      title: incident.title,
+      status: STATUS_LABELS[incident.status] || incident.status,
+      priorityLabel: Labels.priorityFull(incident.priority),
+      severityLabel: Labels.severityFull(incident.severity),
+      impact: capitalize(incident.impact),
+      services: incident.services || 'Under assessment',
+      description: incident.description || 'Investigation ongoing.',
+      mim: incident.commander || 'TBC',
+      roombridge: incident.warRoomBridgeUrl || '',
+      time: formatDateTime(now),
+      org: data.settings.orgName || 'Organisation',
+    };
   }
 
   function deleteAction(incidentId, actionId) {

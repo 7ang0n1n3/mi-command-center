@@ -23,6 +23,7 @@ This project follows a simple date-based changelog because it is distributed as 
 - Moved the manual timeline note entry row to the top of the Timeline tab.
 - Updated All Incidents to display and search by the user-entered Incident No.
 - Added the `{{roombridge}}` communication template placeholder for the War Room Bridge URL.
+- Added manifest-based action list templates from `action-lists/` that can bulk-add action items, with Start of Triage, Database Triage, and Network Triage samples.
 - Corrected the README quick-start path and project tree to use the current repository name and distinguish the generated `mi-data.json` from `mi-data.example.json`.
 - Clarified direct-file and browser-local storage behavior, S1–S3 communication visibility, built-in Playbook configuration, validation commands, and team-mode synchronization and security boundaries.
 
