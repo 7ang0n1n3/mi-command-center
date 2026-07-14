@@ -2,7 +2,7 @@
 
 Offline-first Major Incident command dashboard for Service Desk teams.
 
-MI Command is a portable, PowerShell-driven local web app for declaring and managing Major Incidents during a war-room response. It runs from the project folder, writes incident data to `mi-data.json`, and can be shared with teammates on the same network from the host machine.
+MI Command is a portable, PowerShell-driven local web app for declaring and managing Major Incidents during a war-room response. It runs from the project folder, writes incident data to `mi-data.json`, and is accessible only from the host machine.
 
 ## Features
 
@@ -21,7 +21,7 @@ MI Command is a portable, PowerShell-driven local web app for declaring and mana
 - Keep valid communication templates available even when one template file is missing.
 - Export and import incident data as JSON.
 - Export per-incident reports as HTML or plain text, including overview, incident details, actions, War Room information, and timeline.
-- Run in team mode with automatic refresh and field-aware merge behavior through the PowerShell local server.
+- Keep multiple browser tabs on the host synchronized through the PowerShell local server.
 
 ## Requirements
 
@@ -48,17 +48,15 @@ http://localhost:8080
 
 Incident data is saved to `mi-data.json` in the same folder. The launcher creates this runtime file on first use; `mi-data.example.json` is the empty example committed to the repository.
 
-## Team Mode
+## Local Server Mode
 
-1. Run `start.bat` or `.\start.ps1` on the war-room host PC.
-2. Share the network URL printed in the console, for example `http://192.168.1.50:8080`.
-3. Team members open that URL in Chrome or Edge.
+Run `start.bat` or `.\start.ps1`, then open the localhost URL printed in the console. The server binds only to `localhost`; other computers cannot connect.
 
-When connected through the PowerShell server, the dashboard polls every 3 seconds and shows `Live · team sync` in the top bar.
+When connected through the PowerShell server, the dashboard polls every 3 seconds and shows `Live · team sync` in the top bar. This keeps browser tabs on the same host synchronized.
 
 Team sync reconciles timeline entries by ID, action records by their update time, and core incident fields by per-field timestamps. Action deletions are preserved with tombstones so older clients do not restore deleted work items. Expanded incident details and War Room lists are selected from the newer incident snapshot rather than merged field by field.
 
-Synchronization is best-effort: the server accepts whole-file writes without locking or revision preconditions. Avoid having multiple people edit the same incident details or War Room list at the same time, and keep JSON backups for operationally important incidents.
+Synchronization is best-effort: the server accepts whole-file writes without locking or revision preconditions. Avoid editing the same incident details or War Room list in multiple tabs at the same time, and keep JSON backups for operationally important incidents.
 
 ## Custom Port
 
@@ -88,7 +86,7 @@ Templates are plain text files in `comms/`:
 | `comms/progress-update.txt` | Periodic incident update |
 | `comms/resolution-notice.txt` | All-clear / resolution notice |
 
-Template files can use placeholders such as `{{title}}`, `{{status}}`, `{{priorityLabel}}`, `{{severityLabel}}`, `{{mim}}`, `{{duration}}`, `{{org}}`, and `{{openActions}}`.
+Template files can use placeholders such as `{{title}}`, `{{status}}`, `{{priorityLabel}}`, `{{severityLabel}}`, `{{mim}}`, `{{roombridge}}`, `{{duration}}`, `{{org}}`, and `{{openActions}}`.
 
 Add, remove, or reorder templates in `comms/manifest.json`. Refresh the browser tab after template changes.
 
@@ -101,10 +99,10 @@ Each incident has dedicated tabs:
 | Tab | Purpose |
 | --- | --- |
 | Overview | Status progression, incident summary, business impact, root cause, resolution, next action, and detailed incident fields. |
-| Timeline | Chronological audit trail and manual timeline notes. |
+| Timeline | Chronological audit trail with the manual note entry row at the top. |
 | Actions | Editable action table with start/end, owner, status, and latest update. |
 | War Room | Bridge URL plus grouped people tables for MIM, technical team, vendors, SMEs, and decision makers. |
-| Communications | Template-based stakeholder messages for S1–S3 incidents. The tab is hidden for S4 and S5. |
+| Communications | Template-based stakeholder messages for S1–S3 incidents, including the `{{roombridge}}` placeholder for the War Room Bridge URL. The tab is hidden for S4 and S5. |
 
 Reports use the user-entered `Incident No` from the Overview details wherever possible, including the overview section and footer.
 
@@ -161,9 +159,9 @@ node --check js/labels.js
 
 ## Security Notes
 
-Team mode is intended for trusted local networks. The PowerShell server exposes local incident data to users who can reach the shared URL. Avoid running it on untrusted networks unless access controls are added.
+The PowerShell server binds only to `localhost` and sends no cross-origin resource sharing headers. Incident data is unavailable to other network hosts through this server.
 
-The server provides no authentication, authorization, TLS, or per-user audit identity. Use host firewall rules and network controls to restrict access.
+The server provides no authentication, authorization, TLS, or per-user audit identity. Any process or user with access to the host can access the local server and its data.
 
 ## License
 

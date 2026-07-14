@@ -29,9 +29,6 @@ function Get-DataJson {
 
 function Send-Response($Response, $StatusCode, $ContentType, $Body) {
     $Response.StatusCode = $StatusCode
-    $Response.Headers.Add("Access-Control-Allow-Origin", "*")
-    $Response.Headers.Add("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
-    $Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type")
     if ($null -ne $Body) {
         $buffer = [Text.Encoding]::UTF8.GetBytes($Body)
         $Response.ContentType = $ContentType
@@ -187,15 +184,6 @@ function Test-MiData($Data) {
 $listener = New-Object System.Net.HttpListener
 $urls = @("http://localhost:$Port/")
 
-try {
-    $ips = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-        Where-Object { $_.IPAddress -notlike '127.*' -and $_.PrefixOrigin -ne 'WellKnown' } |
-        Select-Object -ExpandProperty IPAddress -Unique
-    foreach ($ip in $ips) {
-        $urls += "http://${ip}:$Port/"
-    }
-} catch {}
-
 foreach ($url in $urls) {
     $listener.Prefixes.Add($url)
 }
@@ -203,15 +191,12 @@ foreach ($url in $urls) {
 try {
     $listener.Start()
 } catch {
-    Write-Host "Could not bind network addresses. Trying localhost only..." -ForegroundColor Yellow
-    $listener = New-Object System.Net.HttpListener
-    $listener.Prefixes.Add("http://localhost:$Port/")
-    $listener.Start()
-    $urls = @("http://localhost:$Port/")
+    Write-Host "Could not bind localhost:$Port." -ForegroundColor Red
+    throw
 }
 
 Write-Host ""
-Write-Host "MI Command - open in browser (share with your team):"
+Write-Host "MI Command - open in browser:"
 foreach ($url in $urls) {
     Write-Host "  $($url.TrimEnd('/'))"
 }
@@ -227,11 +212,6 @@ try {
         $path = $request.Url.LocalPath
 
         try {
-            if ($request.HttpMethod -eq "OPTIONS") {
-                Send-Response $response 204 $null $null
-                continue
-            }
-
             if ($path -eq "/api/status") {
                 Send-Response $response 200 "application/json" '{"mode":"file","path":"mi-data.json","writable":true}'
                 continue
@@ -272,7 +252,6 @@ try {
             if (Test-Path $fullPath -PathType Leaf) {
                 $bytes = [IO.File]::ReadAllBytes($fullPath)
                 $response.StatusCode = 200
-                $response.Headers.Add("Access-Control-Allow-Origin", "*")
                 $response.ContentType = Get-MimeType $fullPath
                 $response.ContentLength64 = $bytes.Length
                 $response.OutputStream.Write($bytes, 0, $bytes.Length)

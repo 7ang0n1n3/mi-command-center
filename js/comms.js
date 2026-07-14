@@ -95,6 +95,7 @@ Time: {{time}}
       services: incident.services || 'Under assessment',
       description: incident.description || 'Investigation ongoing.',
       mim: incident.commander || 'TBC',
+      roombridge: incident.warRoomBridgeUrl || '',
       time: helpers.formatDateTime(new Date().toISOString()),
       org: settings.orgName || 'Organisation',
       duration: helpers.formatDuration(incident.createdAt, incident.resolvedAt),

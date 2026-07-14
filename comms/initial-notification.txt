@@ -10,7 +10,7 @@ We are aware of an issue affecting the services listed above. Our incident respo
 
 Major Incident Manager: {{mim}}
 Time: {{time}}
-
+Join Bridge : {{roombridge}}
 Next update in 45 minutes.
 
 — {{org}} Service Desk

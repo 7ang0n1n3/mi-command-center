@@ -1066,6 +1066,11 @@ const App = (() => {
     panel.innerHTML = `
       <section class="mi-card">
         <div class="mi-card-title">Timeline</div>
+        <div class="mi-add-row top">
+          <input type="text" class="input" id="timeline-input" placeholder="Add timeline note...">
+          <input type="text" class="input owner-input" id="timeline-author" placeholder="Author" value="Analyst">
+          <button class="btn btn-primary btn-sm" id="btn-add-timeline">Add</button>
+        </div>
         <div class="mi-table-wrap">
           <table class="mi-table timeline-table">
             <thead><tr><th>Time</th><th>Author</th><th>Entry</th></tr></thead>
@@ -1079,11 +1084,6 @@ const App = (() => {
               `).join('') : '<tr><td colspan="3" class="empty-table">No timeline entries yet.</td></tr>'}
             </tbody>
           </table>
-        </div>
-        <div class="mi-add-row">
-          <input type="text" class="input" id="timeline-input" placeholder="Add timeline note...">
-          <input type="text" class="input owner-input" id="timeline-author" placeholder="Author" value="Analyst">
-          <button class="btn btn-primary btn-sm" id="btn-add-timeline">Add</button>
         </div>
       </section>`;
 

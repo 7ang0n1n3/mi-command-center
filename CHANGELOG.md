@@ -8,6 +8,9 @@ This project follows a simple date-based changelog because it is distributed as 
 
 ### Changed
 
+- Restricted the PowerShell server to `localhost`; network hosts can no longer connect.
+- Removed wildcard CORS headers and cross-origin preflight handling from the local API.
+- Updated runtime and security documentation to describe localhost-only access.
 - Moved the light/dark theme control to the top navigation and made it apply system-wide.
 - Persisted the selected theme in browser storage.
 - Darkened light-mode labels and secondary text for better readability.
@@ -17,7 +20,9 @@ This project follows a simple date-based changelog because it is distributed as 
 - Filled action start time when status changes to In Progress and action end time when status changes to Completed.
 - Cleared action start/end fields when status changes back to `-` or KIV.
 - Improved timeline audit entries for incident detail and summary fields so saved values appear in the timeline immediately.
+- Moved the manual timeline note entry row to the top of the Timeline tab.
 - Updated All Incidents to display and search by the user-entered Incident No.
+- Added the `{{roombridge}}` communication template placeholder for the War Room Bridge URL.
 - Corrected the README quick-start path and project tree to use the current repository name and distinguish the generated `mi-data.json` from `mi-data.example.json`.
 - Clarified direct-file and browser-local storage behavior, S1–S3 communication visibility, built-in Playbook configuration, validation commands, and team-mode synchronization and security boundaries.
 
