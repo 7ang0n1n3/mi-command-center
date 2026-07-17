@@ -40,11 +40,13 @@ cd path\to\mi-command-center
 .\start.ps1
 ```
 
-Open the local URL shown in the console, usually:
+The launcher prints a console banner, the local URL, and the data file path. Open the local URL shown in the console, usually:
 
 ```text
 http://localhost:8080
 ```
+
+Keep the launcher window open while using the app. Closing that window stops the local command center; minimize it if you want it out of the way.
 
 Incident data is saved to `mi-data.json` in the same folder. The launcher creates this runtime file on first use; `mi-data.example.json` is the empty example committed to the repository.
 
@@ -143,6 +145,7 @@ mi-command-center/
 ├── css/
 │   └── styles.css
 └── js/
+    ├── actionLists.js
     ├── app.js
     ├── comms.js
     ├── labels.js

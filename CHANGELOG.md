@@ -4,6 +4,14 @@ All notable changes to MI Command are documented here.
 
 This project follows a simple date-based changelog because it is distributed as a portable internal tool rather than a packaged release.
 
+## 2026-07-17
+
+### Changed
+
+- Added a startup console banner to the PowerShell launcher.
+- Updated the launcher output to call out the localhost URL, data file path, and that closing the launcher window stops the command center.
+- Updated the README quick start and project tree to match the current launcher output and JavaScript files.
+
 ## 2026-07-09
 
 ### Changed
