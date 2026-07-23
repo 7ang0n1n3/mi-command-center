@@ -78,6 +78,12 @@ The recommended mode is `start.bat` or `start.ps1` because it keeps the app and 
 
 Direct file linking uses the Chromium File System Access API. If the browser does not expose that API for the way `index.html` was opened, use the PowerShell launcher. Browser local storage is a fallback, not a shared team data store; export a JSON backup before clearing site data or changing browser profiles.
 
+## Language and Encoding
+
+Text fields support Japanese and other Unicode text. The page declares UTF-8, browser storage uses JavaScript strings, JSON export/import preserves Unicode text, and the PowerShell launcher reads and writes `mi-data.json` as UTF-8.
+
+When using Local Server Mode, the app saves data through `/api/data` as JSON. If Japanese text appears corrupted after editing the data file outside the app, resave the file as UTF-8 before importing or relaunching.
+
 ## Communication Templates
 
 Templates are plain text files in `comms/`:

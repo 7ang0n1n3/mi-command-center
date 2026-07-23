@@ -4,6 +4,12 @@ All notable changes to MI Command are documented here.
 
 This project follows a simple date-based changelog because it is distributed as a portable internal tool rather than a packaged release.
 
+## 2026-07-23
+
+### Changed
+
+- Documented Japanese and Unicode text-field support, including UTF-8 handling for JSON storage and imports.
+
 ## 2026-07-17
 
 ### Changed
